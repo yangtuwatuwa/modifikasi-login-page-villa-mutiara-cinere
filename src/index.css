@@ -1,0 +1,193 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary-wf: #f97316;
+  --color-on-primary-wf: #ffffff;
+  --color-ink: #0f172a;
+  --color-ink-strong: #020617;
+  --color-body-text: #334155;
+  --color-body-mid: #475569;
+  --color-mute: #64748b;
+  --color-mute-soft: #94a3b8;
+  --color-hairline: #e2e8f0;
+  --color-canvas: #fffcf8;
+
+  --color-accent-purple: #7a3dff;
+  --color-accent-pink: #ed52cb;
+  --color-accent-blue: #2563eb;
+  --color-accent-blue-deep: #1d4ed8;
+  --color-accent-blue-info: #0284c7;
+  --color-accent-orange: #f97316;
+  --color-accent-green: #16a34a;
+  --color-accent-teal: #0d9488;
+  --color-accent-yellow: #d97706;
+  --color-accent-red: #dc2626;
+
+  --animate-fade-in: fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+.dark {
+  --color-primary-wf: #fb923c;
+  --color-on-primary-wf: #ffffff;
+  --color-ink: #f8fafc;
+  --color-ink-strong: #ffffff;
+  --color-body-text: #cbd5e1;
+  --color-body-mid: #94a3b8;
+  --color-mute: #64748b;
+  --color-mute-soft: #475569;
+  --color-hairline: #1e293b;
+  --color-canvas: #020617;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Sleek custom sidebar scrollbar */
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 5px !important;
+  display: block !important;
+}
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: rgba(2, 6, 23, 0.3) !important;
+  border-radius: 9999px;
+}
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(249, 115, 22, 0.5) !important;
+  border-radius: 9999px;
+}
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(249, 115, 22, 0.85) !important;
+}
+.sidebar-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(249, 115, 22, 0.5) rgba(2, 6, 23, 0.3) !important;
+}
+
+/* Light Mode Enhancement Helpers */
+.light-mode-card {
+  background-color: #ffffff;
+  border: 1px solid #fed7aa;
+  box-shadow: 0 4px 20px -2px rgba(249, 115, 22, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+.dark .light-mode-card {
+  background-color: #0f172a;
+  border-color: #1e293b;
+  box-shadow: none;
+}
+
+/* Single clean primary scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #fff7ed;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #020617;
+}
+::-webkit-scrollbar-thumb {
+  background: #f97316;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #ea580c;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c2410c;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #f97316;
+}
+
+/* Animations */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-fade-in {
+  animation: fade-in 0.35s ease-out;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2.5s ease-in-out infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2.5s ease-in-out infinite;
+}
+
+/* Smartphone & Touch Responsiveness Utilities */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-safe-pb {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
