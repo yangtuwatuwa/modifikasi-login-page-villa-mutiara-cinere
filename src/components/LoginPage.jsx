@@ -94,10 +94,6 @@ export default function LoginPage({
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/90 flex flex-col justify-center relative overflow-hidden font-sans">
-      
-      {/* Decorative background ambient blobs */}
-      <div className="absolute top-1/4 left-10 w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-3xl -z-10 animate-pulse"></div>
-      <div className="absolute bottom-1/4 right-10 w-[500px] h-[500px] bg-amber-500/5 rounded-full blur-3xl -z-10 animate-pulse" style={{ animationDelay: '2s' }}></div>
 
       {/* Floating Theme Toggle (Top Right) */}
       <div className="absolute top-6 right-6 z-50">

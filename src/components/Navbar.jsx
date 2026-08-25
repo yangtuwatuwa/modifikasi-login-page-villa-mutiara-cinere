@@ -56,7 +56,7 @@ export default function Navbar({ darkMode, setDarkMode, currentUser, setCurrentU
           <div className="hidden lg:flex items-center gap-1">
             {menuItems
               .filter(item => {
-                const restrictedTabs = ['profil-saya', 'layanan', 'data-warga', 'kas'];
+                const restrictedTabs = ['profil-saya', 'profil', 'layanan', 'data-warga', 'kas'];
                 if (!currentUser && restrictedTabs.includes(item.id)) return false;
                 return true;
               })
@@ -134,7 +134,7 @@ export default function Navbar({ darkMode, setDarkMode, currentUser, setCurrentU
         <div className="px-4 py-4 space-y-1 sm:px-5">
           {menuItems
             .filter(item => {
-              const restrictedTabs = ['profil-saya', 'layanan', 'data-warga', 'kas'];
+              const restrictedTabs = ['profil-saya', 'profil', 'layanan', 'data-warga', 'kas'];
               if (!currentUser && restrictedTabs.includes(item.id)) return false;
               return true;
             })

@@ -4,8 +4,83 @@ import {
   Users, Calendar, Wallet, CheckCircle2, BarChart2, BookOpen, Layers, FileText,
   Lock, User, LogIn, ShieldAlert, Eye, EyeOff, Loader2,
   MapPin, Phone, Mail, Home, TrendingUp, TrendingDown, PieChart, Activity,
-  Clock, AlertTriangle, Shield, Building2, Megaphone
+  Clock, AlertTriangle, Shield, Building2, Megaphone, Landmark, GraduationCap,
+  Camera, Play, Video, Image, Sparkles, Filter, Maximize2, X,
+  Award, Heart
 } from 'lucide-react';
+import dummyImg1 from '../assets/dummy/dummy_1.png';
+import dummyImg2 from '../assets/dummy/dummy_2.png';
+import dummyImg3 from '../assets/dummy/dummy_3.jpg';
+import dummyImg4 from '../assets/dummy/dummy_4.jpg';
+import dummyImg5 from '../assets/dummy/dummy_5.jpg';
+
+// ═════════════════════════════════════════════════════════════════════════
+// DUMMY CMS DATA TEMPLATE: Siap dihubungkan ke Endpoint API / Database CMS
+// ═════════════════════════════════════════════════════════════════════════
+const DUMMY_DOKUMENTASI = [
+  {
+    id: 'doc-1',
+    title: 'Kerja Bakti Massal & Penghijauan Taman',
+    category: 'Gotong Royong',
+    type: 'image',
+    date: '20 Agustus 2026',
+    location: 'Taman Utama & Jalur Hijau RT 05',
+    thumbnail: dummyImg1,
+    description: 'Kegiatan gotong royong rutin warga dalam merapikan fasilitas umum, pembersihan saluran drainase, dan penanaman pohon peneduh di lingkungan komplek.'
+  },
+  {
+    id: 'doc-2',
+    title: 'Semarak Perayaan & Pentas Seni HUT RI ke-81',
+    category: 'HUT RI',
+    type: 'video',
+    duration: '03:24',
+    date: '17 Agustus 2026',
+    location: 'Lapangan Serbaguna RT 05 / RW 11',
+    thumbnail: dummyImg2,
+    description: 'Dokumentasi video kemeriahan lomba anak-anak, karnaval kostum daerah, serta malam panggung gembira perayaan kemerdekaan RI warga Villa Mutiara Mas Cinere.'
+  },
+  {
+    id: 'doc-3',
+    title: 'Senam Sehat Bugar & Jalan Santai Keluarga',
+    category: 'Olahraga',
+    type: 'image',
+    date: '10 Agustus 2026',
+    location: 'Area Bundaran Utama Komplek',
+    thumbnail: dummyImg3,
+    description: 'Aktivitas kebugaran jasmani bersama instruktur profesional dilanjutkan jalan santai keluarga untuk mempererat tali silaturahmi antarwarga.'
+  },
+  {
+    id: 'doc-4',
+    title: 'Layanan Posyandu Balita & Skrining Lansia',
+    category: 'Kesehatan',
+    type: 'image',
+    date: '05 Agustus 2026',
+    location: 'Balai Warga RW 011',
+    thumbnail: dummyImg4,
+    description: 'Pemeriksaan kesehatan berkala, imunisasi balita, penimbangan berat badan, dan cek tensi/gula darah gratis untuk lansia bekerjasama dengan Puskesmas Cinere.'
+  },
+  {
+    id: 'doc-5',
+    title: 'Turnamen Badminton Antar-RT Se-RW 11',
+    category: 'Olahraga',
+    type: 'image',
+    date: '28 Juli 2026',
+    location: 'Gedung Olahraga (GOR) Komunitas',
+    thumbnail: dummyImg5,
+    description: 'Kompetisi bulutangkis ganda putra dan campuran yang diikuti perwakilan warga RT 001 hingga RT 009 dalam rangka menjunjung sportivitas.'
+  },
+  {
+    id: 'doc-6',
+    title: 'Rapat Koordinasi & Rembug Warga Triwulan III',
+    category: 'Sosial',
+    type: 'video',
+    duration: '01:50',
+    date: '15 Juli 2026',
+    location: 'Ruang Pertemuan Balai Warga',
+    thumbnail: dummyImg3,
+    description: 'Musyawarah keterbukaan anggaran kas RT, evaluasi program kebersihan lingkungan, serta pembahasan rencana perbaikan pos keamanan portal.'
+  }
+];
 
 export default function Hero({ 
   totalKK, 
@@ -31,6 +106,18 @@ export default function Hero({
   const [success, setSuccess] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [revealPassword, setRevealPassword] = useState(false);
+
+  // Dummy Documentation / Gallery states (CMS Ready)
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedMedia, setSelectedMedia] = useState(null);
+
+  const filteredDokumentasi = selectedCategory === 'all'
+    ? DUMMY_DOKUMENTASI
+    : selectedCategory === 'image'
+    ? DUMMY_DOKUMENTASI.filter(d => d.type === 'image')
+    : selectedCategory === 'video'
+    ? DUMMY_DOKUMENTASI.filter(d => d.type === 'video')
+    : DUMMY_DOKUMENTASI.filter(d => d.category.toLowerCase() === selectedCategory.toLowerCase());
 
   // Modal dialog for Emergency Call
   const handleEmergencyClick = (emg) => {
@@ -205,24 +292,13 @@ export default function Hero({
       id="beranda"
       className="relative min-h-screen pt-6 sm:pt-10 pb-20 flex flex-col items-center justify-center overflow-hidden bg-[var(--color-canvas)] text-[var(--color-ink)]"
     >
-      {/* Aesthetic Rich Background Mesh Glow & Glass Decor Layer */}
-      <div className="absolute -top-36 -left-36 w-[600px] h-[600px] bg-gradient-to-tr from-orange-500/25 via-amber-500/20 to-transparent rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-slow"></div>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[450px] bg-orange-400/10 dark:bg-orange-500/15 rounded-full blur-[130px] pointer-events-none -z-10"></div>
-      <div className="absolute -bottom-20 -right-36 w-[650px] h-[650px] bg-gradient-to-br from-amber-500/25 via-orange-500/20 to-transparent rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-slow" style={{ animationDelay: '2.5s' }}></div>
-      <div className="absolute inset-0 bg-[radial-gradient(#f97316_1.5px,transparent_1.5px)] [background-size:28px_28px] opacity-15 dark:opacity-25 pointer-events-none -z-10"></div>
-
-      {/* Floating Background Glass Ring Shapes */}
-      <div className="absolute top-20 right-[12%] w-36 h-36 rounded-full border border-orange-500/25 bg-gradient-to-br from-orange-500/10 to-transparent backdrop-blur-xs pointer-events-none -z-10 animate-bounce-slow hidden md:block"></div>
-      <div className="absolute bottom-24 left-[8%] w-28 h-28 rounded-full border border-amber-500/25 bg-gradient-to-tr from-amber-500/10 to-transparent backdrop-blur-xs pointer-events-none -z-10 animate-pulse-slow hidden md:block" style={{ animationDelay: '1.5s' }}></div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-grow flex flex-col justify-center font-sans relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           
           {/* Welcoming Text Column */}
           <div className="lg:col-span-7 text-center lg:text-left space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[10px] font-extrabold tracking-wider uppercase backdrop-blur-md shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping"></span>
-              🏛️ Portal Informasi & Layanan Mandiri RT 05
+            <div className="text-orange-600 dark:text-orange-400 text-xs sm:text-sm font-extrabold tracking-wider uppercase">
+              Portal Informasi & Layanan Mandiri RT 05
             </div>
             
             <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-black tracking-tight text-[var(--color-ink)] leading-[1.1] lg:tracking-[-0.8px]">
@@ -236,29 +312,72 @@ export default function Hero({
               Mewujudkan lingkungan hunian yang asri, aman, rukun, dan berteknologi demi kenyamanan bersama. Akses layanan persuratan mandiri, pelaporan iuran bulanan, dan transparansi kas RT 05 secara instan dan terbuka.
             </p>
 
-            {/* Clean Inline Trust Badges */}
-            <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-3 sm:gap-6 text-[var(--color-body-mid)] text-[11px] sm:text-xs font-bold">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 backdrop-blur-md">
-                <CheckCircle2 className="w-4 h-4 text-orange-500 shrink-0" />
-                <span>Pelayanan Mandiri Cepat</span>
+            {/* Characteristics Card (Option 3: 2-Column Split with Individual Lucide Icons) */}
+            <div className="w-full p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs text-left space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 shrink-0">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="block text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    Karakteristik & Fasilitas Wilayah
+                  </span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100">
+                    Villa Mutiara Cinere
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 backdrop-blur-md">
-                <CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" />
-                <span>Buku Kas Transparan</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 backdrop-blur-md">
-                <CheckCircle2 className="w-4 h-4 text-orange-500 shrink-0" />
-                <span>Akses Data Real-time</span>
+
+              {/* 2-Column Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                
+                {/* 1. Kawasan Perumahan */}
+                <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800/80">
+                  <div className="p-2 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 shrink-0">
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                  <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                    Kawasan perumahan menengah terdiri dari 9 RT
+                  </p>
+                </div>
+
+                {/* 2. Sarana Ibadah */}
+                <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800/80">
+                  <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                    <Landmark className="w-4 h-4" />
+                  </div>
+                  <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                    Memiliki sarana ibadah
+                  </p>
+                </div>
+
+                {/* 3. Fasilitas Olahraga */}
+                <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800/80">
+                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                    Memiliki fasilitas olahraga
+                  </p>
+                </div>
+
+                {/* 4. Sarana Pendidikan */}
+                <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800/80">
+                  <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
+                    <GraduationCap className="w-4 h-4" />
+                  </div>
+                  <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                    Terdapat pendidikan anak usia dini dan TKIT
+                  </p>
+                </div>
+
               </div>
             </div>
           </div>
           
           {/* Summary / Access Portal Column (Right Side) */}
           <div className="lg:col-span-5 flex justify-center w-full">
-            <div className="relative w-full max-w-md group">
-              {/* Soft ambient glow behind login card */}
-              <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-3xl blur-xl opacity-20 group-hover:opacity-35 transition-all pointer-events-none"></div>
-              
+            <div className="relative w-full max-w-md">
               {/* Core Feature Card (rounded-md with hairline border) */}
               <div className="bg-[var(--color-canvas)] border border-[var(--color-hairline)] rounded-xl sm:rounded-md p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 shadow-md w-full">
                 
@@ -542,6 +661,263 @@ export default function Hero({
           </div>
           
         </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            DOKUMENTASI & GALERI KEGIATAN WARGA (DUMMY CMS GRID TEMPLATE)
+            ═══════════════════════════════════════════════════════════════════ */}
+        {!currentUser && (
+          <div className="mt-16 pt-12 border-t border-[var(--color-hairline)] w-full font-sans space-y-8 animate-fade-in">
+            {/* Section Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 text-left">
+              <div className="space-y-2">
+                <span className="px-3 py-1.5 rounded-sm border border-[var(--color-hairline)] bg-slate-50 dark:bg-slate-900 text-[var(--color-ink)] text-[9px] font-bold tracking-wider uppercase inline-flex items-center gap-1.5 w-fit">
+                  <Camera className="w-3.5 h-3.5 text-orange-500" /> Galeri & Momen Lingkungan
+                </span>
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[var(--color-ink)] tracking-tight">
+                  Dokumentasi Kegiatan Warga
+                </h2>
+                <p className="text-xs sm:text-sm text-[var(--color-body-mid)] max-w-xl">
+                  Dokumentasi acara kegiatan warga Villa Mutiara Mas Cinere
+                </p>
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 dark:bg-slate-900/80 p-1.5 rounded-xl border border-[var(--color-hairline)] text-xs font-bold">
+                {[
+                  { id: 'all', label: 'Semua' },
+                  { id: 'image', label: 'Foto' },
+                  { id: 'video', label: 'Video' },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setSelectedCategory(tab.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                      selectedCategory === tab.id
+                        ? 'bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 shadow-xs font-black'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Grid 6 Items (3 columns on lg, 2 on sm, 1 on mobile) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+              {filteredDokumentasi.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedMedia(item)}
+                  className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 overflow-hidden shadow-xs hover:shadow-lg hover:border-orange-500/40 transition-all duration-300 cursor-pointer flex flex-col justify-between text-left"
+                >
+                  {/* Thumbnail Container */}
+                  <div className="relative aspect-video w-full overflow-hidden bg-slate-100 dark:bg-slate-950">
+                    <img
+                      src={item.thumbnail}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20"></div>
+
+                    {/* Top Badges */}
+                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                      <span className="px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-white text-[10px] font-extrabold uppercase tracking-wider">
+                        {item.category}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-lg bg-orange-600/90 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1">
+                        {item.type === 'video' ? (
+                          <>
+                            <Play className="w-3 h-3 fill-current" />
+                            <span>{item.duration || 'Video'}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="w-3 h-3" />
+                            <span>Foto</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Center Play Button for Video */}
+                    {item.type === 'video' && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-orange-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-orange-500 transition-all duration-300">
+                          <Play className="w-5 h-5 fill-current ml-0.5" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500 font-semibold">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-orange-500" />
+                          {item.date}
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1 truncate max-w-[140px]">
+                          <MapPin className="w-3 h-3 text-slate-400" />
+                          {item.location}
+                        </span>
+                      </div>
+
+                      <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors line-clamp-1">
+                        {item.title}
+                      </h3>
+
+                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed font-medium">
+                        {item.description}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-orange-600 dark:text-orange-400">
+                      <span>Lihat Dokumentasi</span>
+                      <Maximize2 className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                TENTANG VILLA MUTIARA MAS CINERE (PROFIL SINGKAT)
+                ═══════════════════════════════════════════════════════════════════ */}
+            <div className="pt-14 border-t border-[var(--color-hairline)] w-full font-sans space-y-6">
+              {/* Section Header */}
+              <div className="text-center max-w-2xl mx-auto space-y-2">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[var(--color-ink)] tracking-tight">
+                  Tentang Villa Mutiara Mas Cinere
+                </h2>
+              </div>
+
+              {/* Clean Single Profile Card */}
+              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 p-6 sm:p-8 space-y-3 shadow-xs text-left max-w-4xl mx-auto">
+                <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 font-extrabold text-xs uppercase tracking-wider">
+                  <Landmark className="w-4 h-4" />
+                  <span>Profil Perumahan</span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                  Villa Mutiara Mas Cinere merupakan kawasan hunian perumahan menengah yang terletak di Kelurahan Grogol, Kecamatan Limo, Kota Depok. Memadukan kenyamanan kehidupan perumahan asri, tertib, dan aman dengan sistem tata kelola lingkungan RT 05 yang transparan dan berbasis digital demi kemudahan pelayanan mandiri seluruh warga.
+                </p>
+              </div>
+
+              {/* ═══════════════════════════════════════════════════════════════════
+                  BAGAN STRUKTUR PENGURUS RT 05
+                  ═══════════════════════════════════════════════════════════════════ */}
+              <div className="pt-6 space-y-8 max-w-4xl mx-auto">
+                <div className="text-center space-y-1.5">
+                  <span className="px-3 py-1 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[10px] font-extrabold uppercase tracking-wider">
+                    Struktur Organisasi
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                    Bagan Kepengurusan RT 05
+                  </h3>
+                </div>
+
+                {/* Tree Structure Visual */}
+                <div className="flex flex-col items-center justify-center">
+                  
+                  {/* Level 1: Ketua RT */}
+                  <div className="relative flex flex-col items-center z-10">
+                    <div className="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border-2 border-orange-500/40 shadow-md shadow-orange-500/5 hover:border-orange-500 transition-all min-w-[260px] sm:min-w-[290px]">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-orange-600 to-amber-500 text-white flex items-center justify-center font-black text-sm shadow-md shrink-0">
+                        <User className="w-6 h-6" />
+                      </div>
+                      <div className="text-left space-y-0.5">
+                        <span className="block text-[10px] font-extrabold text-orange-600 dark:text-orange-400 uppercase tracking-wider">
+                          Ketua RT 05
+                        </span>
+                        <h4 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight">
+                          Moch. Taufik
+                        </h4>
+                      </div>
+                    </div>
+
+                    {/* Connector line down from Ketua */}
+                    <div className="w-0.5 h-8 bg-orange-500/40 dark:bg-orange-500/30"></div>
+                  </div>
+
+                  {/* Horizontal Crossbar Connector (Desktop) */}
+                  <div className="relative w-full max-w-xl">
+                    <div className="hidden sm:block absolute top-0 left-1/4 right-1/4 h-0.5 bg-orange-500/40 dark:bg-orange-500/30"></div>
+                    <div className="hidden sm:block absolute top-0 left-1/4 w-0.5 h-6 bg-orange-500/40 dark:bg-orange-500/30"></div>
+                    <div className="hidden sm:block absolute top-0 right-1/4 w-0.5 h-6 bg-orange-500/40 dark:bg-orange-500/30"></div>
+
+                    {/* Level 2: Sekretaris & Bendahara Columns */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 pt-0 sm:pt-6 w-full">
+                      
+                      {/* Branch 1: Sekretaris */}
+                      <div className="flex flex-col items-center space-y-3">
+                        {/* Group Header Badge */}
+                        <div className="px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold uppercase tracking-wider w-fit">
+                          Sekretariat
+                        </div>
+
+                        {/* Member 1: Chika Angraeni */}
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-blue-500/50 transition-all w-full max-w-[260px]">
+                          <div className="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
+                            <User className="w-4 h-4" />
+                          </div>
+                          <div className="text-left min-w-0 flex-1">
+                            <span className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Sekretaris I</span>
+                            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate block">Chika Angraeni</span>
+                          </div>
+                        </div>
+
+                        {/* Member 2: Ade Chandra */}
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-blue-500/50 transition-all w-full max-w-[260px]">
+                          <div className="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
+                            <User className="w-4 h-4" />
+                          </div>
+                          <div className="text-left min-w-0 flex-1">
+                            <span className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Sekretaris II</span>
+                            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate block">Ade Chandra</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Branch 2: Bendahara */}
+                      <div className="flex flex-col items-center space-y-3">
+                        {/* Group Header Badge */}
+                        <div className="px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-extrabold uppercase tracking-wider w-fit">
+                          Bendahara / Keuangan
+                        </div>
+
+                        {/* Member 1: Bpk. Mulyani R */}
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-amber-500/50 transition-all w-full max-w-[260px]">
+                          <div className="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
+                            <User className="w-4 h-4" />
+                          </div>
+                          <div className="text-left min-w-0 flex-1">
+                            <span className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Bendahara I</span>
+                            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate block">Bpk. Mulyani R</span>
+                          </div>
+                        </div>
+
+                        {/* Member 2: Ibu Amaniari */}
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-amber-500/50 transition-all w-full max-w-[260px]">
+                          <div className="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
+                            <User className="w-4 h-4" />
+                          </div>
+                          <div className="text-left min-w-0 flex-1">
+                            <span className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Bendahara II</span>
+                            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate block">Ibu Amaniari</span>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
                 {/* ═══════════════════════════════════════════════════════════════════
             QUICK ACCESS PORTAL & INFORMASI DASHBOARD (HANYA UNTUK USER LOGIN)
@@ -1324,6 +1700,70 @@ export default function Hero({
         )}
 
       </div>
+
+      {/* Modal Popup Preview Dokumentasi (CMS Ready) */}
+      {selectedMedia && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in font-sans text-left">
+          <div className="relative bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-scale-up">
+            
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedMedia(null)}
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Media Area */}
+            <div className="relative aspect-video w-full bg-black">
+              {selectedMedia.type === 'video' ? (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 text-white space-y-3 p-6 text-center">
+                  <div className="w-16 h-16 rounded-full bg-orange-600 flex items-center justify-center shadow-lg">
+                    <Play className="w-8 h-8 fill-current ml-1" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-300">Video Dokumentasi Kegiatan ({selectedMedia.duration || 'HD'})</span>
+                  <p className="text-[11px] text-slate-500">Video siap diputar otomatis saat dihubungkan ke storage / media server backend</p>
+                </div>
+              ) : (
+                <img
+                  src={selectedMedia.thumbnail}
+                  alt={selectedMedia.title}
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+
+            {/* Info Area */}
+            <div className="p-6 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold text-[10px] uppercase tracking-wider">
+                  {selectedMedia.category}
+                </span>
+                <span className="text-xs text-slate-400 font-medium">
+                  {selectedMedia.date} • {selectedMedia.location}
+                </span>
+              </div>
+
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                {selectedMedia.title}
+              </h3>
+
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                {selectedMedia.description}
+              </p>
+
+              <div className="pt-3 flex justify-end">
+                <button
+                  onClick={() => setSelectedMedia(null)}
+                  className="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  Tutup Preview
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
