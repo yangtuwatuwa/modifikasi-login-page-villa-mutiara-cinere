@@ -218,10 +218,10 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
             /* Form Mode */
             <div className="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden">
               {/* Top Accent Bar */}
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
 
               <div className="flex items-center gap-3 mb-8">
-                <div className="p-3 bg-orange-500/10 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-2xl">
+                <div className="p-3 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl">
                   <FileText className="w-6 h-6" />
                 </div>
                 <div>
@@ -252,7 +252,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                       <button
                         type="button"
                         onClick={() => revealNik ? setRevealNik(false) : handleRevealClick('nik')}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors p-0.5 cursor-pointer"
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-500 transition-colors p-0.5 cursor-pointer"
                         title={revealNik ? "Sembunyikan NIK" : "Tampilkan NIK (Perlu Sandi)"}
                       >
                         {revealNik ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -280,7 +280,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                       <button
                         type="button"
                         onClick={() => revealKk ? setRevealKk(false) : handleRevealClick('kk')}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors p-0.5 cursor-pointer"
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-500 transition-colors p-0.5 cursor-pointer"
                         title={revealKk ? "Sembunyikan KK" : "Tampilkan KK (Perlu Sandi)"}
                       >
                         {revealKk ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -302,7 +302,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                     value={formData.wargaNama}
                     onChange={handleInputChange}
                     placeholder="Masukkan nama lengkap Anda"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                   />
                 </div>
 
@@ -316,7 +316,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                     name="wargaTipeSurat"
                     value={formData.wargaTipeSurat}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all font-semibold text-xs"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all font-semibold text-xs"
                   >
                     {tipeSuratOptions.map((option, idx) => (
                       <option key={idx} value={option}>{option}</option>
@@ -337,7 +337,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                     value={formData.wargaAlamat}
                     onChange={handleInputChange}
                     placeholder="Contoh: Perumahan Sawangan Green Park Blok B3 No. 12"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                   />
                 </div>
 
@@ -354,7 +354,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                     value={formData.wargaKeperluan}
                     onChange={handleInputChange}
                     placeholder="Contoh: Mengurus kelengkapan dokumen pernikahan anak kandung pertama."
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all resize-none"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all resize-none"
                   />
                 </div>
 
@@ -362,7 +362,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className={`w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-500 dark:from-orange-500 dark:to-amber-400 text-white font-bold flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] hover:shadow-lg hover:shadow-orange-500/15 cursor-pointer transition-all ${
+                  className={`w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-500 dark:to-teal-400 text-white font-bold flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] hover:shadow-lg hover:shadow-emerald-500/15 cursor-pointer transition-all ${
                     isSubmitting ? 'opacity-70 pointer-events-none' : ''
                   }`}
                 >
@@ -385,7 +385,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
             <div className="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 rounded-3xl p-8 sm:p-10 shadow-xl space-y-6 relative overflow-hidden print:p-0 print:border-none print:shadow-none animate-scale-up">
               {/* Success Info */}
               <div className="flex flex-col items-center text-center space-y-3 pb-6 border-b border-slate-100 dark:border-slate-700 print:hidden">
-                <div className="p-4 bg-orange-500/10 dark:bg-orange-500/20 rounded-full text-orange-500 animate-bounce">
+                <div className="p-4 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-full text-emerald-500 animate-bounce">
                   <CheckCircle2 className="w-12 h-12" />
                 </div>
                 <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">Pengajuan Berhasil Dikirim!</h3>
@@ -417,7 +417,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                       <span>{getDisplayNik(submittedData.wargaNik)}</span>
                       <button
                         onClick={() => revealNik ? setRevealNik(false) : handleRevealClick('nik')}
-                        className="text-slate-400 hover:text-orange-500 transition-colors p-0.5 cursor-pointer"
+                        className="text-slate-400 hover:text-emerald-500 transition-colors p-0.5 cursor-pointer"
                         title={revealNik ? "Sembunyikan NIK" : "Tampilkan NIK (Perlu Sandi)"}
                       >
                         {revealNik ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -430,7 +430,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                       <span>{getDisplayKk(submittedData.wargaNoKk)}</span>
                       <button
                         onClick={() => revealKk ? setRevealKk(false) : handleRevealClick('kk')}
-                        className="text-slate-450 hover:text-orange-500 transition-colors p-0.5 cursor-pointer"
+                        className="text-slate-450 hover:text-emerald-500 transition-colors p-0.5 cursor-pointer"
                         title={revealKk ? "Sembunyikan KK" : "Tampilkan KK (Perlu Sandi)"}
                       >
                         {revealKk ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -439,7 +439,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                   </div>
                   <div className="grid grid-cols-3">
                     <span className="text-slate-500 dark:text-slate-400 font-medium">Jenis Surat</span>
-                    <span className="col-span-2 text-orange-600 dark:text-orange-400 font-bold">{submittedData.wargaTipeSurat}</span>
+                    <span className="col-span-2 text-emerald-600 dark:text-emerald-450 font-bold">{submittedData.wargaTipeSurat}</span>
                   </div>
                   <div className="grid grid-cols-3">
                     <span className="text-slate-500 dark:text-slate-400 font-medium">Alamat Rumah</span>
@@ -467,7 +467,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                 </button>
                 <button
                   onClick={() => setSubmittedData(null)}
-                  className="flex-1 py-3 px-5 rounded-xl bg-slate-900 hover:bg-slate-850 dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-bold flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  className="flex-1 py-3 px-5 rounded-xl bg-slate-900 hover:bg-slate-850 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-bold flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   <span>Ajukan Surat Baru</span>
                   <ChevronRight className="w-5 h-5" />
@@ -539,14 +539,14 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                           <span className="font-bold block">#{sub.id}</span>
                           <span className="text-[10px] text-slate-450">{sub.submissionDate}</span>
                         </td>
-                        <td className="p-4 font-bold text-orange-600 dark:text-orange-400">{sub.wargaTipeSurat}</td>
+                        <td className="p-4 font-bold text-emerald-600 dark:text-emerald-450">{sub.wargaTipeSurat}</td>
                         <td className="p-4 italic max-w-[200px] truncate" title={sub.wargaKeperluan}>
                           "{sub.wargaKeperluan}"
                         </td>
                         <td className="p-4 text-center">
                           <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg inline-block ${
                             sub.status === 'Approved'
-                              ? 'bg-orange-50 dark:bg-orange-950/20 text-orange-600'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600'
                               : sub.status === 'Rejected'
                               ? 'bg-red-50 dark:bg-red-950/20 text-red-600'
                               : sub.status === 'Completed'
@@ -560,7 +560,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                           {(sub.status === 'Approved' || sub.status === 'Completed') && (
                             <button
                               onClick={() => setViewingApprovedLetter(sub)}
-                              className="px-3.5 py-1.5 border border-orange-500 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 font-bold text-[10px] rounded-xl transition-colors cursor-pointer"
+                              className="px-3.5 py-1.5 border border-emerald-500 text-emerald-600 dark:text-emerald-450 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 font-bold text-[10px] rounded-xl transition-colors cursor-pointer"
                             >
                               Pratinjau Surat
                             </button>
@@ -589,7 +589,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
               onClick={() => setShowPasswordPrompt(false)}
             ></div>
             <div className="relative bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden z-10 p-6 space-y-4 animate-scale-up font-sans text-xs">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
               <div>
                 <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">Verifikasi Keamanan</h4>
                 <p className="text-[11px] text-slate-550 dark:text-slate-400 mt-1">
@@ -612,12 +612,12 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
                   placeholder="Masukkan Sandi Akun Anda"
                   value={promptPasswordInput}
                   onChange={(e) => setPromptPasswordInput(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-805 rounded-xl outline-none focus:border-orange-500 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-805 rounded-xl outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
                 />
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="flex-1 py-2 bg-gradient-to-r from-orange-600 to-amber-500 text-white font-bold rounded-xl cursor-pointer"
+                    className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-bold rounded-xl cursor-pointer"
                   >
                     Konfirmasi
                   </button>
@@ -639,7 +639,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs" onClick={() => setViewingApprovedLetter(null)}></div>
           <div className="relative bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl overflow-hidden z-10 animate-scale-up my-8">
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
             
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center font-sans">
               <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Pratinjau Surat Resmi RT 05</h3>
@@ -739,7 +739,7 @@ export default function Layanan({ currentUser, submissionsList = [], setSubmissi
               <div className="flex gap-2">
                 <button
                   onClick={() => alert(`Mengunduh berkas surat resmi: ${viewingApprovedLetter.wargaTipeSurat}.docx`)}
-                  className="py-2.5 px-4 bg-orange-600 hover:bg-orange-700 text-white font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-orange-500/10 flex items-center gap-1.5"
+                  className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-emerald-500/10 flex items-center gap-1.5"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Unduh Dokumen</span>

@@ -4,7 +4,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-primary-wf: #f97316;
+  --color-primary-wf: #059669;
   --color-on-primary-wf: #ffffff;
   --color-ink: #0f172a;
   --color-ink-strong: #020617;
@@ -13,15 +13,15 @@
   --color-mute: #64748b;
   --color-mute-soft: #94a3b8;
   --color-hairline: #e2e8f0;
-  --color-canvas: #fffcf8;
+  --color-canvas: #f8fafc;
 
   --color-accent-purple: #7a3dff;
   --color-accent-pink: #ed52cb;
   --color-accent-blue: #2563eb;
   --color-accent-blue-deep: #1d4ed8;
   --color-accent-blue-info: #0284c7;
-  --color-accent-orange: #f97316;
-  --color-accent-green: #16a34a;
+  --color-accent-orange: #ea580c;
+  --color-accent-green: #059669;
   --color-accent-teal: #0d9488;
   --color-accent-yellow: #d97706;
   --color-accent-red: #dc2626;
@@ -41,7 +41,7 @@
 }
 
 .dark {
-  --color-primary-wf: #fb923c;
+  --color-primary-wf: #10b981;
   --color-on-primary-wf: #ffffff;
   --color-ink: #f8fafc;
   --color-ink-strong: #ffffff;
@@ -83,22 +83,22 @@ body {
   border-radius: 9999px;
 }
 .sidebar-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(249, 115, 22, 0.5) !important;
+  background: rgba(16, 185, 129, 0.5) !important;
   border-radius: 9999px;
 }
 .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(249, 115, 22, 0.85) !important;
+  background: rgba(16, 185, 129, 0.85) !important;
 }
 .sidebar-scrollbar {
   scrollbar-width: thin !important;
-  scrollbar-color: rgba(249, 115, 22, 0.5) rgba(2, 6, 23, 0.3) !important;
+  scrollbar-color: rgba(16, 185, 129, 0.5) rgba(2, 6, 23, 0.3) !important;
 }
 
 /* Light Mode Enhancement Helpers */
 .light-mode-card {
   background-color: #ffffff;
-  border: 1px solid #fed7aa;
-  box-shadow: 0 4px 20px -2px rgba(249, 115, 22, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px -2px rgba(5, 150, 105, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
 }
 
 .dark .light-mode-card {
@@ -113,23 +113,23 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #fff7ed;
+  background: #f1f5f9;
 }
 .dark ::-webkit-scrollbar-track {
   background: #020617;
 }
 ::-webkit-scrollbar-thumb {
-  background: #f97316;
+  background: #059669;
   border-radius: 9999px;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #ea580c;
+  background: #10b981;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #c2410c;
+  background: #047857;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #f97316;
+  background: #059669;
 }
 
 /* Animations */
@@ -173,21 +173,4 @@ body {
 
 .animate-bounce-slow {
   animation: bounce-slow 2.5s ease-in-out infinite;
-}
-
-/* Smartphone & Touch Responsiveness Utilities */
-* {
-  -webkit-tap-highlight-color: transparent;
-}
-
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .mobile-safe-pb {
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-  }
-}
-
-.table-responsive-wrapper {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }

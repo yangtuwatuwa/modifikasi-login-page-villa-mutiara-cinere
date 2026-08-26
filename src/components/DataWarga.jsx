@@ -38,8 +38,8 @@ export default function DataWarga({ totalKK, totalHidup, totalMeninggal, wargaLi
   const pctElderly = sumAge > 0 ? Math.round((eCount / sumAge) * 100) : 10;
   
   const dataDemografiUsia = [
-    { label: 'Anak-anak (0-14 thn)', count: cCount, percentage: pctChild, color: 'bg-amber-500' },
-    { label: 'Usia Produktif (15-64 thn)', count: aCount, percentage: pctActive, color: 'bg-orange-500' },
+    { label: 'Anak-anak (0-14 thn)', count: cCount, percentage: pctChild, color: 'bg-teal-500' },
+    { label: 'Usia Produktif (15-64 thn)', count: aCount, percentage: pctActive, color: 'bg-emerald-500' },
     { label: 'Lansia (65+ thn)', count: eCount, percentage: pctElderly, color: 'bg-amber-500' },
   ];
 
@@ -52,13 +52,13 @@ export default function DataWarga({ totalKK, totalHidup, totalMeninggal, wargaLi
         
         {/* Section Header */}
         <div className="text-center space-y-4 mb-16">
-          <h2 className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+          <h2 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
             Statistik Kependudukan
           </h2>
           <p className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">
             Data Demografi & Jumlah Warga
           </p>
-          <div className="w-12 h-1 bg-orange-500 mx-auto rounded-full"></div>
+          <div className="w-12 h-1 bg-emerald-500 mx-auto rounded-full"></div>
         </div>
 
         {/* 3 Core Stats Cards */}
@@ -70,16 +70,16 @@ export default function DataWarga({ totalKK, totalHidup, totalMeninggal, wargaLi
               <div className="space-y-2">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Kartu Keluarga</span>
                 <span className="block text-4xl font-black text-slate-900 dark:text-white">{totalKK}</span>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Terdaftar di wilayah Villa Mutiara Mas Cinere</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Terdaftar di wilayah Sawangan Green Park</p>
               </div>
-              <div className="p-3 bg-orange-500/10 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-2xl">
+              <div className="p-3 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl">
                 <FileText className="w-6 h-6" />
               </div>
             </div>
             {/* Average members per family badge */}
             <div className="mt-6 pt-4 border-t border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
               <span>Rata-rata Anggota per KK</span>
-              <span className="font-bold text-orange-600 dark:text-orange-400">± {rataRataAnggotaKK} Orang</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">± {rataRataAnggotaKK} Orang</span>
             </div>
           </div>
 
@@ -88,10 +88,10 @@ export default function DataWarga({ totalKK, totalHidup, totalMeninggal, wargaLi
             <div className="flex justify-between items-start">
               <div className="space-y-2">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Penduduk Hidup</span>
-                <span className="block text-4xl font-black text-orange-600 dark:text-orange-400">{totalPenduduk}</span>
+                <span className="block text-4xl font-black text-emerald-600 dark:text-emerald-400">{totalPenduduk}</span>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Warga berstatus aktif tinggal menetap/kontrak</p>
               </div>
-              <div className="p-3 bg-orange-500/10 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-2xl">
+              <div className="p-3 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl">
                 <Users className="w-6 h-6" />
               </div>
             </div>
@@ -177,7 +177,7 @@ export default function DataWarga({ totalKK, totalHidup, totalMeninggal, wargaLi
               {/* Legends */}
               <div className="space-y-3 flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-md bg-orange-500"></div>
+                  <div className="w-4 h-4 rounded-md bg-emerald-500"></div>
                   <div>
                     <span className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Laki-Laki ({pctLaki}%)</span>
                     <span className="block text-sm font-bold text-slate-900 dark:text-white">{dataDemografiGender.lakiLaki} Jiwa</span>
@@ -195,7 +195,7 @@ export default function DataWarga({ totalKK, totalHidup, totalMeninggal, wargaLi
 
             {/* Note */}
             <div className="pt-4 border-t border-slate-200/50 dark:border-slate-800/50 text-[11px] text-slate-400 text-center flex items-center justify-center gap-1.5">
-              <TrendingUp className="w-3.5 h-3.5 text-orange-500" />
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
               <span>Rasio gender seimbang mendukung kerukunan sosial klaster.</span>
             </div>
           </div>
@@ -229,7 +229,7 @@ export default function DataWarga({ totalKK, totalHidup, totalMeninggal, wargaLi
 
             {/* Info */}
             <div className="pt-4 border-t border-slate-200/50 dark:border-slate-800/50 text-[11px] text-slate-400 flex items-center gap-1.5">
-              <span>* Data dihimpun dari lampiran sensus KK RT Villa Mutiara Mas Cinere terakhir.</span>
+              <span>* Data dihimpun dari lampiran sensus KK RT Sawangan Green Park terakhir.</span>
             </div>
           </div>
 

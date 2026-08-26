@@ -1,13 +1,3 @@
-
-
-
-
-
-
-
-
-
-
 import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, Wallet, Calendar, FileCheck, LogOut, 
@@ -21,10 +11,10 @@ import {
 } from 'lucide-react';
 import AdminDataWizard from './AdminDataWizard';
 import DateInput from './DateInput';
+import OtpVerificationModal from './OtpVerificationModal';
 import Swal from 'sweetalert2';
 import { io } from '../utils/liveSocket';
-import logoRW11 from '../assets/logo_rw11.png';
-import logoDepok from '../assets/logo_depok.png';
+import logoGSP from '../assets/logoGSP.png';
 
 // Backend endpoints may return an array directly or wrap it in an envelope.
 const extractArrayFromResponse = (payload) => {
@@ -2582,63 +2572,15 @@ export default function AdminDashboard({
     username: '', password: '', email: '', role: 'warga'
   });
 
-  // Email OTP Verification Modal States
+  // Email OTP Verification Modal States (Flow 1)
   const [showOtpModal, setShowOtpModal] = useState(false);
-  const [otpEmail, setOtpEmail] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
-  const [otpTimer, setOtpTimer] = useState(60);
-  const [otpError, setOtpError] = useState('');
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpTargetUserId, setOtpTargetUserId] = useState(null);
+  const [otpTargetEmail, setOtpTargetEmail] = useState('');
+  const [pendingAccountData, setPendingAccountData] = useState(null);
   const [emailFieldError, setEmailFieldError] = useState('');
 
   const isValidEmailFormat = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || '').trim());
-  };
-
-  useEffect(() => {
-    let timerInterval;
-    if (showOtpModal && otpTimer > 0) {
-      timerInterval = setInterval(() => {
-        setOtpTimer((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(timerInterval);
-  }, [showOtpModal, otpTimer]);
-
-  const generateAndSendOtp = async (email) => {
-    setOtpDigits(['', '', '', '', '', '']);
-    setOtpTimer(60);
-    setOtpError('');
-    
-    const targetUserId = parseInt(selectedCitizenForAccount?.id || selectedCitizenForAccount?.family_id || selectedCitizenForAccount?.familyId || 1);
-
-    try {
-      const response = await fetch('http://172.20.32.31:3333/auth/request-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          userId: targetUserId,
-          email: (email || '').trim(),
-          purpose: 'VERIFICATION'
-        })
-      });
-
-      const resData = await response.json();
-      if (!response.ok || resData.success === false) {
-        const errorMsg = resData.pesan || resData.message || resData.error || (resData.errors && resData.errors[0]?.message) || 'Gagal mengirimkan kode OTP ke email.';
-        setOtpError(errorMsg);
-        return { success: false, message: errorMsg };
-      }
-      return { success: true };
-    } catch (e) {
-      console.warn('Request OTP API error:', e);
-      const networkError = `Koneksi gagal: ${e.message}`;
-      setOtpError(networkError);
-      return { success: false, message: networkError };
-    }
   };
 
   // Global Copy Helper for SweetAlert2 HTML buttons
@@ -3071,113 +3013,8 @@ export default function AdminDashboard({
       return;
     }
 
-    // Pre-check & Request OTP (Cek email duplikat di backend sebelum buka modal OTP)
-    const cleanEmail = accountForm.email.trim();
-    setOtpEmail(cleanEmail);
-    const otpResult = await generateAndSendOtp(cleanEmail);
-
-    if (!otpResult || !otpResult.success) {
-      const errMsg = otpResult?.message || 'Gagal mengirimkan kode OTP.';
-      if (errMsg.toLowerCase().includes('email') || errMsg.toLowerCase().includes('terdaftar')) {
-        setEmailFieldError(errMsg);
-      } else {
-        setFormError(errMsg);
-      }
-      return;
-    }
-
-    // Buka pop-up modal OTP hanya jika request-otp berhasil
-    setModalType('');
-    setShowOtpModal(true);
-  };
-
-  const handleOtpInputChange = (index, value) => {
-    if (!/^\d*$/.test(value)) return;
-    const newDigits = [...otpDigits];
-    newDigits[index] = value.substring(value.length - 1);
-    setOtpDigits(newDigits);
-    setOtpError('');
-
-    if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-input-${index + 1}`);
-      if (nextInput) nextInput.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      const prevInput = document.getElementById(`otp-input-${index - 1}`);
-      if (prevInput) prevInput.focus();
-    }
-  };
-
-  const handleOtpPaste = (e) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').trim().replace(/\D/g, '');
-    if (pastedData.length > 0) {
-      const digits = pastedData.slice(0, 6).split('');
-      const newDigits = ['', '', '', '', '', ''];
-      digits.forEach((digit, i) => {
-        newDigits[i] = digit;
-      });
-      setOtpDigits(newDigits);
-      setOtpError('');
-      const lastIndex = Math.min(digits.length - 1, 5);
-      const lastInput = document.getElementById(`otp-input-${lastIndex}`);
-      if (lastInput) lastInput.focus();
-    }
-  };
-
-  const handleVerifyOtpSubmit = async (e) => {
-    if (e) e.preventDefault();
-    const enteredCode = otpDigits.join('');
-    if (enteredCode.length < 6) {
-      setOtpError('Harap masukkan 6 digit kode OTP secara lengkap.');
-      return;
-    }
-
-    setIsVerifyingOtp(true);
-    setOtpError('');
-
-    const targetUserId = parseInt(selectedCitizenForAccount?.id || selectedCitizenForAccount?.family_id || selectedCitizenForAccount?.familyId || 1);
-
-    try {
-      const response = await fetch('http://172.20.32.31:3333/auth/verify-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          userId: targetUserId,
-          otp: enteredCode,
-          purpose: 'VERIFICATION'
-        })
-      });
-
-      const resData = await response.json();
-
-      if (!response.ok || resData.success === false) {
-        setOtpError(resData.pesan || resData.message || 'Kode OTP tidak valid atau sudah kedaluwarsa.');
-        setIsVerifyingOtp(false);
-        return;
-      }
-
-      // OTP Verification Success -> Perform final account registration
-      await performFinalAccountRegistration();
-
-    } catch (err) {
-      console.warn('Verify OTP API error:', err);
-      setOtpError('Gagal memverifikasi kode OTP ke server.');
-      setIsVerifyingOtp(false);
-    }
-  };
-
-  const performFinalAccountRegistration = async () => {
-    if (!selectedCitizenForAccount) return;
-
-    setIsVerifyingOtp(true);
     const targetFamilyId = selectedCitizenForAccount.family_id || selectedCitizenForAccount.fammilyId || selectedCitizenForAccount.familyId || selectedCitizenForAccount.id;
-    const citizenName = selectedCitizenForAccount.name || 'Warga';
+    const citizenName = selectedCitizenForAccount.name || selectedCitizenForAccount.nama || 'Warga';
 
     setIsCreatingAccount(true);
     setLoadingAccountId(selectedCitizenForAccount.id);
@@ -3194,7 +3031,7 @@ export default function AdminDashboard({
           familyId: parseInt(targetFamilyId),
           username: accountForm.username.trim(),
           password: accountForm.password,
-          email: accountForm.email ? accountForm.email.trim() : undefined
+          email: accountForm.email.trim()
         })
       });
 
@@ -3202,7 +3039,6 @@ export default function AdminDashboard({
 
       // 409 Conflict / Username Taken
       if (response.status === 409) {
-        setShowOtpModal(false);
         const conflictMsg = (resData.pesan || resData.message || resData.error || '').toLowerCase();
         if (conflictMsg.includes('username')) {
           setUsernameFieldError('Username sudah digunakan. Silakan pilih username lain.');
@@ -3224,10 +3060,9 @@ export default function AdminDashboard({
 
       // Other Server Errors
       if (!response.ok) {
-        setShowOtpModal(false);
         const errorText = resData.pesan || resData.message || resData.error || (resData.errors && resData.errors[0]?.message) || 'Terjadi kesalahan pada server.';
         Swal.fire({
-          title: 'Gagal Membuat Akun',
+          title: 'Gagal Mendaftarkan Akun',
           text: errorText,
           icon: 'error',
           confirmButtonColor: '#ef4444',
@@ -3239,59 +3074,28 @@ export default function AdminDashboard({
         return;
       }
 
-      // Success
+      // Extract userId from response
       const output = resData.output || resData;
-      const createdUsername = output.username || accountForm.username.trim();
-      const createdPassword = output.temporaryPassword || output.password || accountForm.password;
+      const createdUserId = resData.userId || output.userId || output.user?.id || output.id || resData.id || resData.user?.id;
+      const createdUsername = output.username || resData.username || accountForm.username.trim();
+      const createdPassword = output.temporaryPassword || output.password || resData.temporaryPassword || resData.password || accountForm.password;
 
-      setShowOtpModal(false);
+      // Save pending account details for credential display and state refresh AFTER OTP succeeds
+      setPendingAccountData({
+        citizen: selectedCitizenForAccount,
+        familyId: targetFamilyId,
+        username: createdUsername,
+        password: createdPassword,
+        citizenName
+      });
+
+      // Close registration form modal & open OTP verification popup with userId attached
       setModalType('');
+      setOtpTargetUserId(createdUserId);
+      setOtpTargetEmail(accountForm.email.trim());
+      setShowOtpModal(true);
 
-      Swal.fire({
-        title: 'Akun Berhasil Dibuat 🎉',
-        text: 'Akun berhasil dibuat. Silakan berikan informasi login kepada warga.',
-        icon: 'success',
-        confirmButtonColor: '#10b981',
-        customClass: {
-          popup: 'rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white',
-          title: 'text-lg font-black text-slate-900 dark:text-white'
-        }
-      });
-
-      // Save created account permanently to local storage registry so it never gets lost or overwritten
-      saveCreatedAccount(selectedCitizenForAccount, targetFamilyId, createdUsername, createdPassword);
-
-      const targetCitizenId = selectedCitizenForAccount.id || selectedCitizenForAccount.warga_id;
-      const targetCitizenNik = selectedCitizenForAccount.nik;
-      const cleanSelectedName = cleanNameStr(selectedCitizenForAccount.name || selectedCitizenForAccount.nama);
-
-      // Update state without reload ONLY for this citizen
-      const updatedWargaList = wargaList.map(item => {
-        const isMatch = (targetCitizenId && (item.id === targetCitizenId || item.warga_id === targetCitizenId)) || 
-                        (targetCitizenNik && item.nik === targetCitizenNik) ||
-                        (!targetCitizenId && !targetCitizenNik && cleanSelectedName && cleanNameStr(item.name || item.nama) === cleanSelectedName);
-        if (isMatch) {
-          return {
-            ...item,
-            username: createdUsername,
-            account_username: createdUsername,
-            password: createdPassword,
-            has_account: true,
-            account_created: true,
-            account_id: output.account_id || output.id || item.account_id || true
-          };
-        }
-        return item;
-      });
-      setWargaList(updatedWargaList);
-      try {
-        localStorage.setItem('rt_wargalist', JSON.stringify(updatedWargaList));
-      } catch (e) {}
-
-      if (fetchResidentServerList) fetchResidentServerList();
-      if (fetchWargaListFromServer) fetchWargaListFromServer();
     } catch (err) {
-      setShowOtpModal(false);
       Swal.fire({
         title: 'Koneksi Gagal',
         text: `Gagal terhubung ke server: ${err.message}`,
@@ -3304,9 +3108,55 @@ export default function AdminDashboard({
       });
     } finally {
       setIsCreatingAccount(false);
-      setIsVerifyingOtp(false);
       setLoadingAccountId(null);
     }
+  };
+
+  const handleOtpVerificationSuccess = (verifyResData) => {
+    setShowOtpModal(false);
+
+    if (!pendingAccountData) return;
+
+    const { citizen, familyId, username, password, citizenName } = pendingAccountData;
+
+    // 1. Show Account Credentials Alert
+    showAccountCredentialsAlert(username, password, citizenName);
+
+    // 2. Persist to local created accounts registry AFTER OTP verified
+    saveCreatedAccount(citizen, familyId, username, password);
+
+    // 3. Refresh citizen state only after OTP is successfully verified
+    const targetCitizenId = citizen.id || citizen.warga_id;
+    const targetCitizenNik = citizen.nik;
+    const cleanSelectedName = cleanNameStr(citizen.name || citizen.nama);
+
+    const updatedWargaList = wargaList.map(item => {
+      const isMatch = (targetCitizenId && (item.id === targetCitizenId || item.warga_id === targetCitizenId)) || 
+                      (targetCitizenNik && item.nik === targetCitizenNik) ||
+                      (!targetCitizenId && !targetCitizenNik && cleanSelectedName && cleanNameStr(item.name || item.nama) === cleanSelectedName);
+      if (isMatch) {
+        return {
+          ...item,
+          username: username,
+          account_username: username,
+          password: password,
+          has_account: true,
+          account_created: true,
+          is_verified: 1
+        };
+      }
+      return item;
+    });
+
+    setWargaList(updatedWargaList);
+    try {
+      localStorage.setItem('rt_wargalist', JSON.stringify(updatedWargaList));
+    } catch (e) {}
+
+    if (typeof fetchResidentServerList === 'function') fetchResidentServerList();
+    if (typeof fetchWargaListFromServer === 'function') fetchWargaListFromServer();
+
+    setPendingAccountData(null);
   };
 
   const [kasForm, setKasForm] = useState({
@@ -4312,26 +4162,23 @@ export default function AdminDashboard({
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row text-slate-800 dark:text-slate-100 font-sans antialiased relative overflow-hidden">
       {/* Premium ambient glows */}
       <div className="absolute top-1/4 left-10 w-[500px] h-[500px] bg-[var(--color-primary-wf)]/5 dark:bg-[var(--color-primary-wf)]/[0.02] rounded-full blur-3xl -z-10 pointer-events-none animate-pulse-slow"></div>
-      <div className="absolute bottom-1/4 right-10 w-[500px] h-[500px] bg-amber-500/5 dark:bg-amber-500/[0.02] rounded-full blur-3xl -z-10 pointer-events-none animate-pulse-slow" style={{ animationDelay: '3s' }}></div>
+      <div className="absolute bottom-1/4 right-10 w-[500px] h-[500px] bg-teal-500/5 dark:bg-teal-500/[0.02] rounded-full blur-3xl -z-10 pointer-events-none animate-pulse-slow" style={{ animationDelay: '3s' }}></div>
       
       {/* Mobile Sticky Header Bar (< md) */}
-      <header className="md:hidden sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-orange-200/60 dark:border-slate-800 px-4 py-3 flex items-center justify-between shadow-xs">
+      <header className="md:hidden sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-emerald-200/60 dark:border-slate-800 px-4 py-3 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsMobileDrawerOpen(true)}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             aria-label="Buka Menu Navigasi"
           >
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 py-1">
-  <img src={logoDepok} alt="Logo Kota Depok" className="h-7 w-auto object-contain drop-shadow-xs opacity-90" />
-  <img src={logoRW11} alt="Logo RW 11" className="h-8 w-auto object-contain drop-shadow-xs" />
-</div>
+            <img src={logoGSP} alt="Logo Sawangan Green Park" className="h-7 w-auto object-contain drop-shadow-xs" />
             <div>
               <h1 className="font-extrabold text-xs text-slate-900 dark:text-white leading-tight">Admin Sawangan Green Park</h1>
-              <span className="text-[9px] text-orange-600 dark:text-orange-400 font-bold uppercase tracking-wider block">RT 05 / RW 06</span>
+              <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block">RT 05 / RW 06</span>
             </div>
           </div>
         </div>
@@ -4353,16 +4200,13 @@ export default function AdminDashboard({
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fade-in"
             onClick={() => setIsMobileDrawerOpen(false)}
           />
-          <aside className="relative w-72 max-w-[85vw] bg-gradient-to-b from-orange-50/95 via-slate-50 to-amber-50/95 dark:from-orange-950 dark:via-amber-950 dark:to-slate-950 text-slate-800 dark:text-white h-full flex flex-col shadow-2xl z-10 overflow-y-auto">
-            <div className="p-4 border-b border-orange-200/80 dark:border-orange-900/40 flex items-center justify-between">
+          <aside className="relative w-72 max-w-[85vw] bg-gradient-to-b from-emerald-50/95 via-slate-50 to-teal-50/95 dark:from-emerald-950 dark:via-teal-950 dark:to-slate-950 text-slate-800 dark:text-white h-full flex flex-col shadow-2xl z-10 overflow-y-auto">
+            <div className="p-4 border-b border-emerald-200/80 dark:border-emerald-900/40 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="flex items-center gap-1.5 py-1">
-  <img src={logoDepok} alt="Logo Kota Depok" className="h-7 w-auto object-contain drop-shadow-xs opacity-90" />
-  <img src={logoRW11} alt="Logo RW 11" className="h-8 w-auto object-contain drop-shadow-xs" />
-</div>
+                <img src={logoGSP} alt="Logo Sawangan Green Park" className="h-8 w-auto object-contain drop-shadow-xs" />
                 <div>
                   <h1 className="font-extrabold text-xs text-slate-900 dark:text-white leading-tight">Sawangan Green Park</h1>
-                  <span className="text-[8px] text-orange-600 dark:text-orange-400 font-bold uppercase tracking-wider block">Admin Portal • RT 05</span>
+                  <span className="text-[8px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block">Admin Portal • RT 05</span>
                 </div>
               </div>
               <button
@@ -4374,13 +4218,13 @@ export default function AdminDashboard({
               </button>
             </div>
 
-            <div className="p-3 mx-3 my-3 bg-white/90 dark:bg-orange-900/30 rounded-2xl border border-orange-200/80 dark:border-orange-700/40 shadow-xs flex items-center gap-3 backdrop-blur-md">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white font-black flex items-center justify-center text-xs shadow-md shadow-orange-500/20">
+            <div className="p-3 mx-3 my-3 bg-white/90 dark:bg-emerald-900/30 rounded-2xl border border-emerald-200/80 dark:border-emerald-700/40 shadow-xs flex items-center gap-3 backdrop-blur-md">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-black flex items-center justify-center text-xs shadow-md shadow-emerald-500/20">
                 AD
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{currentUser.name}</p>
-                <p className="text-[9px] text-orange-700 dark:text-orange-300 font-extrabold uppercase tracking-wider">
+                <p className="text-[9px] text-emerald-700 dark:text-emerald-300 font-extrabold uppercase tracking-wider">
                   {currentUser.role === 'rt' || currentUser.role === 'admin' ? 'Ketua RT' : currentUser.role === 'sekertaris' ? 'Sekretaris' : 'Bendahara'}
                 </p>
               </div>
@@ -4393,11 +4237,11 @@ export default function AdminDashboard({
                   onClick={() => { setActiveTab('overview'); setSearchQuery(''); }}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     activeTab === 'overview'
-                      ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <LayoutDashboard className="w-4 h-4 text-orange-500" />
+                  <LayoutDashboard className="w-4 h-4 text-emerald-500" />
                   <span>Dashboard Overview</span>
                 </button>
                 {currentUser.role !== 'bendahara' && (
@@ -4406,7 +4250,7 @@ export default function AdminDashboard({
                       onClick={() => { setActiveTab('warga'); setSearchQuery(''); }}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         activeTab === 'warga'
-                          ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                       }`}
                     >
@@ -4417,12 +4261,12 @@ export default function AdminDashboard({
                       onClick={() => { setActiveTab('sek_warga_masuk'); setSearchQuery(''); }}
                       className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         activeTab === 'sek_warga_masuk'
-                          ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <UserCheck className="w-4 h-4 text-orange-500" />
+                        <UserCheck className="w-4 h-4 text-emerald-500" />
                         <span>Verifikasi Registrasi Warga</span>
                       </div>
                       {pendingWargaList.length > 0 && (
@@ -4437,7 +4281,7 @@ export default function AdminDashboard({
                   onClick={() => { setActiveTab('kas'); setSearchQuery(''); }}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     activeTab === 'kas'
-                      ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                   }`}
                 >
@@ -4448,7 +4292,7 @@ export default function AdminDashboard({
                   onClick={() => { setActiveTab('agenda'); setSearchQuery(''); }}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     activeTab === 'agenda'
-                      ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                   }`}
                 >
@@ -4459,18 +4303,18 @@ export default function AdminDashboard({
                   onClick={() => { setActiveTab('layanan'); setSearchQuery(''); }}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     activeTab === 'layanan'
-                      ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                   }`}
                 >
-                  <FileText className="w-4 h-4 text-orange-400" />
+                  <FileText className="w-4 h-4 text-emerald-400" />
                   <span>Persuratan & Layanan</span>
                 </button>
                 <button
                   onClick={() => { setActiveTab('pengaturan'); setSearchQuery(''); }}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     activeTab === 'pengaturan'
-                      ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                   }`}
                 >
@@ -4500,27 +4344,24 @@ export default function AdminDashboard({
       )}
 
       {/* 1. DESKTOP SIDEBAR - Dual Mode Adaptive (Hidden on Mobile) */}
-      <aside className="hidden md:flex md:w-64 bg-gradient-to-b from-orange-50/90 via-slate-50 to-amber-50/70 dark:from-orange-950 dark:via-amber-950 dark:to-slate-950 text-slate-800 dark:text-white border-r border-orange-200/80 dark:border-orange-900/40 flex-col flex-shrink-0 shadow-lg md:h-screen md:sticky md:top-0">
+      <aside className="hidden md:flex md:w-64 bg-gradient-to-b from-emerald-50/90 via-slate-50 to-teal-50/70 dark:from-emerald-950 dark:via-teal-950 dark:to-slate-950 text-slate-800 dark:text-white border-r border-emerald-200/80 dark:border-emerald-900/40 flex-col flex-shrink-0 shadow-lg md:h-screen md:sticky md:top-0">
         {/* Brand/Logo Header */}
-        <div className="p-6 border-b border-orange-200/80 dark:border-orange-900/40 flex items-center gap-3">
-          <div className="flex items-center gap-1.5 py-1">
-  <img src={logoDepok} alt="Logo Kota Depok" className="h-7 w-auto object-contain drop-shadow-xs opacity-90" />
-  <img src={logoRW11} alt="Logo RW 11" className="h-8 w-auto object-contain drop-shadow-xs" />
-</div>
+        <div className="p-6 border-b border-emerald-200/80 dark:border-emerald-900/40 flex items-center gap-3">
+          <img src={logoGSP} alt="Logo Sawangan Green Park" className="h-10 w-auto object-contain drop-shadow-md" />
           <div>
             <h1 className="font-extrabold text-sm text-slate-900 dark:text-white tracking-tight leading-tight">Sawangan Green Park</h1>
-            <span className="text-[10px] text-orange-700 dark:text-orange-300 uppercase font-extrabold tracking-widest leading-none block mt-0.5">Admin Portal • RT 05</span>
+            <span className="text-[10px] text-emerald-700 dark:text-emerald-300 uppercase font-extrabold tracking-widest leading-none block mt-0.5">Admin Portal • RT 05</span>
           </div>
         </div>
 
         {/* Admin Info */}
-        <div className="p-4 mx-4 my-3 bg-white/90 dark:bg-orange-900/30 rounded-2xl border border-orange-200/80 dark:border-orange-700/40 shadow-xs flex items-center gap-3 backdrop-blur-md">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white font-black flex items-center justify-center text-sm shadow-md shadow-orange-500/20">
+        <div className="p-4 mx-4 my-3 bg-white/90 dark:bg-emerald-900/30 rounded-2xl border border-emerald-200/80 dark:border-emerald-700/40 shadow-xs flex items-center gap-3 backdrop-blur-md">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-black flex items-center justify-center text-sm shadow-md shadow-emerald-500/20">
             AD
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{currentUser.name}</p>
-            <p className="text-[10px] text-orange-700 dark:text-orange-300 font-extrabold uppercase tracking-wider">
+            <p className="text-[10px] text-emerald-700 dark:text-emerald-300 font-extrabold uppercase tracking-wider">
               {currentUser.role === 'rt' || currentUser.role === 'admin' ? 'Ketua RT' : currentUser.role === 'sekertaris' ? 'Sekretaris' : 'Bendahara'}
             </p>
           </div>
@@ -4991,7 +4832,7 @@ export default function AdminDashboard({
                 onClick={() => { setActiveTab('pengaturan'); setSearchQuery(''); }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'pengaturan'
-                    ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -5007,7 +4848,7 @@ export default function AdminDashboard({
                 onClick={() => { setActiveTab('overview'); setSearchQuery(''); }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'overview'
-                    ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -5100,7 +4941,7 @@ export default function AdminDashboard({
                 onClick={() => { setActiveTab('sek_info_pengumuman'); setSearchQuery(''); }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'sek_info_pengumuman'
-                    ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -5113,7 +4954,7 @@ export default function AdminDashboard({
                 onClick={() => { setActiveTab('agenda'); setSearchQuery(''); }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'agenda'
-                    ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -5152,7 +4993,7 @@ export default function AdminDashboard({
                 onClick={() => { setActiveTab('sek_laporan'); setSearchQuery(''); }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'sek_laporan'
-                    ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -5216,18 +5057,18 @@ export default function AdminDashboard({
                           : 'text-slate-400 hover:text-white hover:bg-slate-800/30'
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full transition-all ${activeTab === 'iuran_tunggakan' ? 'bg-orange-500 scale-125' : 'bg-slate-600'}`}></span>
+                      <span className={`w-1.5 h-1.5 rounded-full transition-all ${activeTab === 'iuran_tunggakan' ? 'bg-emerald-455 scale-125' : 'bg-slate-600'}`}></span>
                       <span>Tunggakan Iuran</span>
                     </button>
                     <button
                       onClick={() => { setActiveTab('iuran_verifikasi'); setSearchQuery(''); }}
                       className={`w-full text-left py-1.5 px-3 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
                         activeTab === 'iuran_verifikasi' 
-                          ? 'text-orange-600 dark:text-orange-500 font-bold bg-slate-855/50' 
+                          ? 'text-emerald-600 dark:text-emerald-455 font-bold bg-slate-855/50' 
                           : 'text-slate-400 hover:text-white hover:bg-slate-800/30'
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full transition-all ${activeTab === 'iuran_verifikasi' ? 'bg-orange-500 scale-125' : 'bg-slate-600'}`}></span>
+                      <span className={`w-1.5 h-1.5 rounded-full transition-all ${activeTab === 'iuran_verifikasi' ? 'bg-emerald-455 scale-125' : 'bg-slate-600'}`}></span>
                       <span>Verifikasi Transfer</span>
                     </button>
                   </div>
@@ -5239,7 +5080,7 @@ export default function AdminDashboard({
                 onClick={() => { setActiveTab('sek_akun_manage'); setSearchQuery(''); }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'sek_akun_manage'
-                    ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -5252,11 +5093,11 @@ export default function AdminDashboard({
                 onClick={() => { setActiveTab('rt_statistik'); setSearchQuery(''); }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'rt_statistik'
-                    ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <TrendingUp className="w-4 h-4 text-amber-400" />
+                <TrendingUp className="w-4 h-4 text-teal-400" />
                 <span>Statistik</span>
               </button>
 
@@ -5265,7 +5106,7 @@ export default function AdminDashboard({
                 onClick={() => { setActiveTab('pengaturan'); setSearchQuery(''); }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'pengaturan'
-                    ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-100/30 dark:border-orange-900/30 shadow-xs'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border border-emerald-100/30 dark:border-emerald-900/30 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -5308,12 +5149,12 @@ export default function AdminDashboard({
       </aside>
 
       {/* 2. MAIN AREA */}
-      <main className="flex-1 flex flex-col min-w-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-orange-100/60 via-slate-50 to-amber-50/40 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950 min-h-screen">
+      <main className="flex-1 flex flex-col min-w-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-100/60 via-slate-50 to-teal-50/40 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950 min-h-screen">
         
         {/* Header Ribbon */}
-        <header className="sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-orange-200/60 dark:border-slate-800/50 py-4 px-6 md:px-8 z-30 flex items-center justify-between">
+        <header className="sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-emerald-200/60 dark:border-slate-800/50 py-4 px-6 md:px-8 z-30 flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest font-mono">
+            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest font-mono">
               {activeTab === 'overview' && 'KONTROL PANEL'}
               {activeTab === 'warga' && 'ADMINISTRASI PENDUDUK'}
               {activeTab === 'kas' && 'MONITORING KEUANGAN'}
@@ -5349,11 +5190,11 @@ export default function AdminDashboard({
           </div>
           
           <div className="flex items-center gap-2.5 sm:gap-4">
-            <span className="inline-flex px-3 py-1 bg-orange-500/15 border border-orange-500/30 text-orange-600 dark:text-orange-400 rounded-lg text-[10px] font-extrabold uppercase tracking-wider items-center gap-1.5 animate-pulse-slow">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block animate-ping"></span>
+            <span className="inline-flex px-3 py-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-450 rounded-lg text-[10px] font-extrabold uppercase tracking-wider items-center gap-1.5 animate-pulse-slow">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-ping"></span>
               Live Sync
             </span>
-            <span className="hidden sm:inline-flex px-3 py-1 bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 rounded-lg text-xs font-bold items-center gap-1.5">
+            <span className="hidden sm:inline-flex px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-xs font-bold items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
               Sesi Aktif
             </span>
@@ -5381,14 +5222,14 @@ export default function AdminDashboard({
           ) : (
             <>
               {/* Universal Dynamic Header Banner - Dual Mode Adaptive */}
-              <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/5 dark:from-orange-950/70 dark:via-amber-950/70 dark:to-orange-950/50 border border-orange-500/20 dark:border-orange-500/30 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8 animate-fade-in font-sans">
-                <div className="absolute right-[-20px] top-[-20px] w-48 h-48 bg-orange-500/10 dark:bg-orange-400/20 rounded-full blur-3xl pointer-events-none"></div>
+              <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/5 dark:from-emerald-950/70 dark:via-teal-950/70 dark:to-emerald-950/50 border border-emerald-500/20 dark:border-emerald-500/30 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8 animate-fade-in font-sans">
+                <div className="absolute right-[-20px] top-[-20px] w-48 h-48 bg-emerald-500/10 dark:bg-emerald-400/20 rounded-full blur-3xl pointer-events-none"></div>
                 <div className="space-y-1.5 z-10">
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 bg-orange-500/15 dark:bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-extrabold uppercase tracking-wider text-orange-800 dark:text-orange-200 border border-orange-500/20 dark:border-white/20">
+                    <span className="px-2.5 py-0.5 bg-emerald-500/15 dark:bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-200 border border-emerald-500/20 dark:border-white/20">
                       RT 05 / RW 06 Portal Admin
                     </span>
-                    <span className="text-[10px] text-orange-600 dark:text-orange-300 font-mono font-bold">● Live Sync</span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-300 font-mono font-bold">● Live Sync</span>
                   </div>
                   <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white capitalize">
                     {activeTab === 'overview' && 'Dasbor Kontrol Pengurus RT 05 👋'}
@@ -5422,12 +5263,12 @@ export default function AdminDashboard({
                     {activeTab === 'logs' && 'Log Audit Akses Pengurus 🛡️'}
                     {activeTab === 'pengaturan' && 'Pengaturan Keuangan & Kata Sandi ⚙️'}
                   </h3>
-                  <p className="text-xs text-slate-600 dark:text-orange-100 max-w-2xl leading-relaxed font-medium">
+                  <p className="text-xs text-slate-600 dark:text-emerald-100 max-w-2xl leading-relaxed font-medium">
                     Sistem Portal Manajemen RT 05 untuk kelancaran administrasi dan pelayanan warga.
                   </p>
                 </div>
-                <div className="px-4 py-2 bg-orange-600 dark:bg-white/20 hover:bg-orange-700 dark:hover:bg-white/30 backdrop-blur-md text-white font-extrabold text-xs rounded-xl shadow-md border border-orange-500/30 dark:border-white/30 flex items-center gap-2 transition-all z-10 flex-shrink-0">
-                  <Sparkles className="w-4 h-4 text-white dark:text-orange-300" />
+                <div className="px-4 py-2 bg-emerald-600 dark:bg-white/20 hover:bg-emerald-700 dark:hover:bg-white/30 backdrop-blur-md text-white font-extrabold text-xs rounded-xl shadow-md border border-emerald-500/30 dark:border-white/30 flex items-center gap-2 transition-all z-10 flex-shrink-0">
+                  <Sparkles className="w-4 h-4 text-white dark:text-emerald-300" />
                   <span>RT 05 Modern System</span>
                 </div>
               </div>
@@ -5437,14 +5278,14 @@ export default function AdminDashboard({
             <div className="space-y-8 animate-fade-in">
               
               {/* Welcome Banner Card */}
-              <div className="bg-gradient-to-r from-orange-700 via-amber-700 to-orange-900 text-white rounded-3xl p-6 sm:p-8 border border-orange-500/30 shadow-xl shadow-orange-500/10 relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                <div className="absolute right-[-20px] top-[-20px] w-40 h-40 bg-orange-400/20 rounded-full blur-3xl pointer-events-none"></div>
+              <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-900 text-white rounded-3xl p-6 sm:p-8 border border-emerald-500/30 shadow-xl shadow-emerald-500/10 relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                <div className="absolute right-[-20px] top-[-20px] w-40 h-40 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none"></div>
                 <div className="space-y-2 z-10">
                   <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">Dasbor Kontrol Pengurus RT 05 👋</h3>
-                  <p className="text-xs text-orange-100 max-w-xl leading-relaxed">Kelola kependudukan, pengajuan surat warga, pembukuan kas RT, dan verifikasi iuran bulanan dalam satu panel kontrol terpadu.</p>
+                  <p className="text-xs text-emerald-100 max-w-xl leading-relaxed">Kelola kependudukan, pengajuan surat warga, pembukuan kas RT, dan verifikasi iuran bulanan dalam satu panel kontrol terpadu.</p>
                 </div>
                 <div className="px-5 py-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-extrabold text-xs rounded-xl shadow-lg border border-white/30 flex items-center gap-2 transition-all z-10">
-                  <Sparkles className="w-4 h-4 text-orange-300" />
+                  <Sparkles className="w-4 h-4 text-emerald-300" />
                   <span>Status System: Real-Time Sync</span>
                 </div>
               </div>
@@ -5453,8 +5294,8 @@ export default function AdminDashboard({
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6">
                 
                 {/* 1. Total Warga */}
-                <div className="bg-gradient-to-br from-orange-500/10 via-amber-500/5 to-white dark:from-orange-950/40 dark:to-slate-900 border border-orange-500/30 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 hover:scale-[1.02] hover:shadow-md transition-all duration-300">
-                  <div className="p-2.5 sm:p-3.5 bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-xl sm:rounded-2xl shadow-md shadow-orange-500/20 shrink-0">
+                <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-white dark:from-emerald-950/40 dark:to-slate-900 border border-emerald-500/30 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 hover:scale-[1.02] hover:shadow-md transition-all duration-300">
+                  <div className="p-2.5 sm:p-3.5 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-xl sm:rounded-2xl shadow-md shadow-emerald-500/20 shrink-0">
                     <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <span className="hidden" aria-hidden="true">{logsTrigger}</span>
@@ -5489,13 +5330,13 @@ export default function AdminDashboard({
                 </div>
 
                 {/* 4. IPL Sudah Lunas */}
-                <div className="bg-gradient-to-br from-orange-500/10 via-green-500/5 to-white dark:from-orange-950/40 dark:to-slate-900 border border-orange-500/30 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 hover:scale-[1.02] hover:shadow-md transition-all duration-300">
-                  <div className="p-2.5 sm:p-3.5 bg-gradient-to-br from-orange-600 to-green-600 text-white rounded-xl sm:rounded-2xl shadow-md shadow-orange-500/20 shrink-0">
+                <div className="bg-gradient-to-br from-emerald-500/10 via-green-500/5 to-white dark:from-emerald-950/40 dark:to-slate-900 border border-emerald-500/30 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 hover:scale-[1.02] hover:shadow-md transition-all duration-300">
+                  <div className="p-2.5 sm:p-3.5 bg-gradient-to-br from-emerald-600 to-green-600 text-white rounded-xl sm:rounded-2xl shadow-md shadow-emerald-500/20 shrink-0">
                     <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="block text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight truncate">
-                      {calcIplLunas} <span className="text-xs text-orange-600 dark:text-orange-400 font-bold">KK</span>
+                      {calcIplLunas} <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">KK</span>
                     </span>
                     <span className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-extrabold uppercase tracking-wider block truncate">IPL Lunas</span>
                   </div>
@@ -5515,8 +5356,8 @@ export default function AdminDashboard({
                 </div>
 
                 {/* 6. Surat Masuk */}
-                <div className="bg-gradient-to-br from-cyan-500/10 via-amber-500/5 to-white dark:from-cyan-950/40 dark:to-slate-900 border border-cyan-500/30 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 hover:scale-[1.02] hover:shadow-md transition-all duration-300">
-                  <div className="p-2.5 sm:p-3.5 bg-gradient-to-br from-cyan-500 to-amber-600 text-white rounded-xl sm:rounded-2xl shadow-md shadow-cyan-500/20 shrink-0">
+                <div className="bg-gradient-to-br from-cyan-500/10 via-teal-500/5 to-white dark:from-cyan-950/40 dark:to-slate-900 border border-cyan-500/30 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 hover:scale-[1.02] hover:shadow-md transition-all duration-300">
+                  <div className="p-2.5 sm:p-3.5 bg-gradient-to-br from-cyan-500 to-teal-600 text-white rounded-xl sm:rounded-2xl shadow-md shadow-cyan-500/20 shrink-0">
                     <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -5597,10 +5438,10 @@ export default function AdminDashboard({
                     {/* 3. Pembayaran IPL */}
                     <button
                       onClick={() => { setActiveTab('iuran_pembayaran'); setSearchQuery(''); }}
-                      className="w-full p-3 sm:py-3 sm:px-4 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500 text-amber-600 dark:text-amber-400 font-bold text-xs rounded-2xl flex flex-col sm:flex-row items-center justify-center sm:justify-between text-center sm:text-left gap-2 group transition-all active:scale-95 cursor-pointer min-h-[84px] sm:min-h-[52px]"
+                      className="w-full p-3 sm:py-3 sm:px-4 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/20 hover:border-teal-500 text-teal-600 dark:text-teal-400 font-bold text-xs rounded-2xl flex flex-col sm:flex-row items-center justify-center sm:justify-between text-center sm:text-left gap-2 group transition-all active:scale-95 cursor-pointer min-h-[84px] sm:min-h-[52px]"
                     >
                       <div className="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-3">
-                        <div className="p-2 sm:p-1.5 bg-amber-500 text-white rounded-xl shadow-xs shrink-0">
+                        <div className="p-2 sm:p-1.5 bg-teal-500 text-white rounded-xl shadow-xs shrink-0">
                           <Wallet className="w-5 h-5 sm:w-4 sm:h-4" />
                         </div>
                         <span className="text-[11px] sm:text-xs leading-tight">Bayar IPL</span>
@@ -5634,7 +5475,7 @@ export default function AdminDashboard({
                   {/* Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-2.5">
-                      <div className="p-2 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl">
+                      <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
                         <Bell className="w-4 h-4" />
                       </div>
                       <div>
@@ -5644,7 +5485,7 @@ export default function AdminDashboard({
                     </div>
 
                     <div className="flex items-center gap-2 self-end sm:self-auto">
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black bg-orange-500/10 text-orange-600 border border-orange-500/20">
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                         {adminNotifications.length} Info Terkini
                       </span>
                     </div>
@@ -5665,7 +5506,7 @@ export default function AdminDashboard({
                         onClick={() => setAdminNotifCategory(flt.id)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                           adminNotifCategory === flt.id
-                            ? 'bg-orange-600 text-white shadow-xs'
+                            ? 'bg-emerald-600 text-white shadow-xs'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                         }`}
                       >
@@ -5685,13 +5526,13 @@ export default function AdminDashboard({
                           className={`p-3.5 rounded-2xl border transition-all duration-200 flex items-start justify-between gap-3 cursor-pointer hover:scale-[1.01] group ${
                             act.isUrgent
                               ? 'bg-rose-500/10 dark:bg-rose-950/20 border-rose-500/30'
-                              : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200/60 dark:border-slate-800 hover:border-orange-500/40'
+                              : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200/60 dark:border-slate-800 hover:border-emerald-500/40'
                           }`}
                         >
                           <div className="flex items-start gap-3 min-w-0 flex-1">
                             <div className={`p-2 rounded-xl text-white shrink-0 mt-0.5 shadow-xs ${
                               act.category === 'ipl'
-                                ? 'bg-gradient-to-br from-amber-500 to-orange-600'
+                                ? 'bg-gradient-to-br from-amber-500 to-emerald-600'
                                 : act.category === 'kegiatan'
                                 ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
                                 : act.category === 'jadwal'
@@ -5710,7 +5551,7 @@ export default function AdminDashboard({
                             </div>
                             <div className="min-w-0 flex-1 space-y-0.5">
                               <div className="flex items-center justify-between gap-1.5">
-                                <h5 className="font-extrabold text-slate-900 dark:text-white text-xs group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors truncate">
+                                <h5 className="font-extrabold text-slate-900 dark:text-white text-xs group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
                                   {act.title}
                                 </h5>
                                 <span className="text-[9px] font-mono text-slate-400 shrink-0">{act.time}</span>
@@ -5722,7 +5563,7 @@ export default function AdminDashboard({
                           </div>
 
                           <div className="flex items-center self-center shrink-0">
-                            <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 group-hover:translate-x-1 transition-transform">
+                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-1 transition-transform">
                               ↗
                             </span>
                           </div>
@@ -5759,7 +5600,7 @@ export default function AdminDashboard({
                       placeholder="Cari KK (No. KK, Nama Kepala, Username, Alamat)..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="px-3.5 py-2 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white max-w-xs w-full"
+                      className="px-3.5 py-2 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white max-w-xs w-full"
                     />
 
                     {/* Filter Status Akun */}
@@ -5778,11 +5619,11 @@ export default function AdminDashboard({
                         onClick={() => setAccountFilter('has_account')}
                         className={`px-3 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
                           accountFilter === 'has_account'
-                            ? 'bg-orange-500 text-white shadow-xs'
-                            : 'text-orange-600 dark:text-orange-400 hover:bg-orange-500/10'
+                            ? 'bg-emerald-500 text-white shadow-xs'
+                            : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'
                         }`}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-orange-300"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>
                         Sudah Memiliki Akun
                       </button>
                       <button
@@ -5812,7 +5653,7 @@ export default function AdminDashboard({
 
                 {isLoadingResidents ? (
                   <div className="py-12 flex flex-col items-center justify-center gap-3">
-                    <div className="w-8 h-8 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
                     <span className="text-slate-500 dark:text-slate-400 font-medium text-xs">Memuat data...</span>
                   </div>
                 ) : residentError ? (
@@ -5824,7 +5665,7 @@ export default function AdminDashboard({
                     </div>
                     <button
                       onClick={fetchResidentServerList}
-                      className="py-1.5 px-4 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                      className="py-1.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
                     >
                       Coba Lagi
                     </button>
@@ -5853,7 +5694,7 @@ export default function AdminDashboard({
                     if (filteredList.length === 0) {
                       return (
                         <div className="py-12 px-4 border border-slate-200/60 dark:border-slate-800 rounded-3xl text-center space-y-3 bg-slate-50/50 dark:bg-slate-950/40">
-                          <div className="w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center mx-auto">
+                          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
                             <Users className="w-6 h-6" />
                           </div>
                           <div className="space-y-1">
@@ -5911,7 +5752,7 @@ export default function AdminDashboard({
                                     {noKK?.includes('x') && !revealedKks[id] && (
                                       <button
                                         onClick={() => handleRevealResident(id)}
-                                        className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-orange-600 hover:text-orange-700 transition-colors cursor-pointer"
+                                        className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer"
                                         title="Buka Sensor KK"
                                       >
                                         <Eye className="w-3.5 h-3.5" />
@@ -5926,7 +5767,7 @@ export default function AdminDashboard({
                                   <td className="p-4">
                                     <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] capitalize ${
                                       statusRumah === 'pribadi' || statusRumah === 'Tetap' || statusRumah === 'Milik Sendiri'
-                                        ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                         : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
                                     }`}>
                                       {statusRumah}
@@ -5934,8 +5775,8 @@ export default function AdminDashboard({
                                   </td>
                                   <td className="p-4">
                                     {hasAccount ? (
-                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-500/10 text-orange-700 dark:text-orange-300 border border-orange-500/30 rounded-full font-extrabold text-[9px]">
-                                        <Check className="w-3 h-3 text-orange-500" />
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 rounded-full font-extrabold text-[9px]">
+                                        <Check className="w-3 h-3 text-emerald-500" />
                                         Sudah Ada Akun
                                         {foundUsername ? ` (@${foundUsername})` : ''}
                                       </span>
@@ -5958,7 +5799,7 @@ export default function AdminDashboard({
                                       <button
                                         onClick={() => openRegisterAccountModal(r)}
                                         disabled={isCreatingAccount}
-                                        className="py-1 px-3 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-lg text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 shadow-sm disabled:opacity-50"
+                                        className="py-1 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 shadow-sm disabled:opacity-50"
                                       >
                                         Registrasi Akun
                                       </button>
@@ -5966,7 +5807,7 @@ export default function AdminDashboard({
 
                                     <button
                                       onClick={() => triggerPatchResidentKK(id, noKK)}
-                                      className="py-1 px-2.5 border border-slate-200 dark:border-slate-800 hover:border-orange-500 dark:hover:border-orange-500 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-300 transition-all cursor-pointer"
+                                      className="py-1 px-2.5 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-300 transition-all cursor-pointer"
                                     >
                                       Edit KK
                                     </button>
@@ -5994,7 +5835,7 @@ export default function AdminDashboard({
                 </div>
                 <button
                   onClick={fetchPendingWargaList}
-                  className="py-1 px-2.5 border border-slate-200 dark:border-slate-800 hover:border-orange-500 rounded-lg text-[10px] font-bold text-slate-500 dark:text-slate-400 cursor-pointer"
+                  className="py-1 px-2.5 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 rounded-lg text-[10px] font-bold text-slate-500 dark:text-slate-400 cursor-pointer"
                 >
                   🔄 Segarkan
                 </button>
@@ -6002,7 +5843,7 @@ export default function AdminDashboard({
 
               {isLoadingPendingWarga ? (
                 <div className="p-12 text-center flex flex-col items-center justify-center space-y-4">
-                  <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                   <p className="text-xs font-bold text-slate-500">Memuat data warga pending...</p>
                 </div>
               ) : pendingWargaError ? (
@@ -6056,7 +5897,7 @@ export default function AdminDashboard({
                               </button>
                               <button
                                 onClick={() => handleVerifyPendingWarga(w.warga_id || w.id, 'diterima')}
-                                className="py-1 px-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                className="py-1 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
                               >
                                 Setujui
                               </button>
@@ -6141,7 +5982,7 @@ export default function AdminDashboard({
                     />
                   </div>
                 </div>
-                <button type="submit" className="py-2 px-4 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl cursor-pointer">Simpan Warga Keluar</button>
+                <button type="submit" className="py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl cursor-pointer">Simpan Warga Keluar</button>
               </form>
 
               <div className="overflow-x-auto border border-slate-200/60 dark:border-slate-800 rounded-2xl">
@@ -6220,7 +6061,7 @@ export default function AdminDashboard({
                         placeholder="Cari Nomor / Pengirim / Perihal..."
                         value={suratMasukSearch}
                         onChange={(e) => { setSuratMasukSearch(e.target.value); setSuratMasukPage(1); }}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950/45 border border-slate-200/80 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950/45 border border-slate-200/80 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all"
                       />
                     </div>
 
@@ -6228,7 +6069,7 @@ export default function AdminDashboard({
                     <select
                       value={suratMasukStatusFilter}
                       onChange={(e) => { setSuratMasukStatusFilter(e.target.value); setSuratMasukPage(1); }}
-                      className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950/45 border border-slate-200/80 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-xs font-extrabold text-slate-600 dark:text-slate-300 cursor-pointer"
+                      className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950/45 border border-slate-200/80 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-xs font-extrabold text-slate-600 dark:text-slate-300 cursor-pointer"
                     >
                       <option value="All">Semua Status</option>
                       <option value="Baru">Baru</option>
@@ -6287,7 +6128,7 @@ export default function AdminDashboard({
                       });
                       setModalType('add_surat_masuk');
                     }}
-                    className="py-2.5 px-4 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-orange-500/10 transition-all flex items-center gap-2 cursor-pointer self-start md:self-auto"
+                    className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-emerald-500/10 transition-all flex items-center gap-2 cursor-pointer self-start md:self-auto"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Registrasi Surat Masuk</span>
@@ -6347,7 +6188,7 @@ export default function AdminDashboard({
                                   ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' 
                                   : s.status === 'Diproses' 
                                     ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' 
-                                    : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                               }`}>
                                 {s.status}
                               </span>
@@ -6355,7 +6196,7 @@ export default function AdminDashboard({
                             <td className="p-4 text-right flex justify-end gap-1.5">
                               <button
                                 onClick={() => setSuratMasukDetail(s)}
-                                className="p-1 border border-slate-200 dark:border-slate-800 hover:border-orange-500 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-lg text-slate-500 hover:text-orange-500 cursor-pointer"
+                                className="p-1 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-lg text-slate-500 hover:text-emerald-500 cursor-pointer"
                                 title="Detail Surat"
                               >
                                 <Eye className="w-3.5 h-3.5" />
@@ -6405,14 +6246,14 @@ export default function AdminDashboard({
                       <button
                         disabled={suratMasukPage === 1}
                         onClick={() => setSuratMasukPage(prev => Math.max(prev - 1, 1))}
-                        className="p-1.5 border border-slate-200 dark:border-slate-800 hover:border-orange-500 rounded-lg text-slate-400 hover:text-orange-500 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                        className="p-1.5 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 rounded-lg text-slate-400 hover:text-emerald-500 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </button>
                       <button
                         disabled={suratMasukPage === totalPages}
                         onClick={() => setSuratMasukPage(prev => Math.min(prev + 1, totalPages))}
-                        className="p-1.5 border border-slate-200 dark:border-slate-800 hover:border-orange-500 rounded-lg text-slate-400 hover:text-orange-500 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                        className="p-1.5 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 rounded-lg text-slate-400 hover:text-emerald-500 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
@@ -6442,13 +6283,13 @@ export default function AdminDashboard({
                     <div className="flex gap-2">
                       <button
                         onClick={() => setPreviewingTemplate(t)}
-                        className="py-2 px-3.5 border border-slate-200 dark:border-slate-800 hover:border-orange-500 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-350 hover:text-orange-500 font-extrabold text-[10px] rounded-xl cursor-pointer transition-colors"
+                        className="py-2 px-3.5 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-350 hover:text-emerald-500 font-extrabold text-[10px] rounded-xl cursor-pointer transition-colors"
                       >
                         Pratinjau Kop Surat
                       </button>
                       <button
                         onClick={() => alert(`Mengunduh format ${t.name}.docx... (Simulasi Unduh Template)`)}
-                        className="py-2 px-3.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] rounded-xl cursor-pointer"
+                        className="py-2 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-xl cursor-pointer"
                       >
                         Unduh Format
                       </button>
@@ -6469,7 +6310,7 @@ export default function AdminDashboard({
                 </div>
                 <button
                   onClick={fetchServerAnnouncements}
-                  className="py-1 px-2.5 border border-slate-200 dark:border-slate-800 hover:border-orange-500 rounded-lg text-[10px] font-bold text-slate-500 dark:text-slate-400 cursor-pointer"
+                  className="py-1 px-2.5 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 rounded-lg text-[10px] font-bold text-slate-500 dark:text-slate-400 cursor-pointer"
                 >
                   🔄 Segarkan
                 </button>
@@ -6508,7 +6349,7 @@ export default function AdminDashboard({
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button type="submit" className="py-2 px-5 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-white font-bold text-xs rounded-xl cursor-pointer transition-all">
+                  <button type="submit" className="py-2 px-5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white font-bold text-xs rounded-xl cursor-pointer transition-all">
                     {editingAnnouncementId ? 'Simpan Perubahan' : 'Terbitkan Pengumuman'}
                   </button>
                   {editingAnnouncementId && (
@@ -6526,7 +6367,7 @@ export default function AdminDashboard({
               {/* Announcement List */}
               {isLoadingAnnouncements ? (
                 <div className="p-12 text-center flex flex-col items-center justify-center space-y-4">
-                  <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                   <p className="text-xs font-bold text-slate-500">Memuat pengumuman...</p>
                 </div>
               ) : announcementsError ? (
@@ -6614,7 +6455,7 @@ export default function AdminDashboard({
                     />
                   </div>
                 </div>
-                <button type="submit" className="py-2 px-4 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl cursor-pointer">Simpan Notulen</button>
+                <button type="submit" className="py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl cursor-pointer">Simpan Notulen</button>
               </form>
 
               <div className="overflow-x-auto border border-slate-200/60 dark:border-slate-800 rounded-2xl">
@@ -6652,7 +6493,7 @@ export default function AdminDashboard({
                 </div>
                 <button
                   onClick={fetchServerComplaints}
-                  className="py-1 px-2.5 border border-slate-200 dark:border-slate-800 hover:border-orange-500 rounded-lg text-[10px] font-bold text-slate-500 dark:text-slate-400 cursor-pointer"
+                  className="py-1 px-2.5 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 rounded-lg text-[10px] font-bold text-slate-500 dark:text-slate-400 cursor-pointer"
                 >
                   🔄 Segarkan
                 </button>
@@ -6660,7 +6501,7 @@ export default function AdminDashboard({
 
               {isLoadingComplaints ? (
                 <div className="p-12 text-center flex flex-col items-center justify-center space-y-4">
-                  <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                   <p className="text-xs font-bold text-slate-500">Memuat data pengaduan...</p>
                 </div>
               ) : complaintsError ? (
@@ -6697,7 +6538,7 @@ export default function AdminDashboard({
                           <td className="p-4 text-center">
                             <span className={`px-2.5 py-0.5 rounded-full font-bold text-[9px] capitalize ${
                               c.status === 'disetujui'
-                                ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                 : c.status === 'ditolak'
                                 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-450'
                                 : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 animate-pulse'
@@ -6710,7 +6551,7 @@ export default function AdminDashboard({
                               <>
                                 <button
                                   onClick={() => handleUpdateComplaintStatus(c.id, 'disetujui')}
-                                  className="py-1 px-2.5 bg-orange-600 hover:bg-orange-700 text-white text-[9px] font-bold rounded-lg cursor-pointer transition-colors"
+                                  className="py-1 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold rounded-lg cursor-pointer transition-colors"
                                 >
                                   Setujui
                                 </button>
@@ -6821,7 +6662,7 @@ export default function AdminDashboard({
                   />
                 </div>
 
-                <button type="submit" className="py-2.5 px-5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl cursor-pointer shadow-sm">
+                <button type="submit" className="py-2.5 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl cursor-pointer shadow-sm">
                   Arsipkan File / Media
                 </button>
               </form>
@@ -6854,7 +6695,7 @@ export default function AdminDashboard({
                                 Swal.fire('Informasi', `Pratinjau/Unduh berkas ${a.name} (${a.size})`, 'info');
                               }
                             }} 
-                            className="py-1 px-3 bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
+                            className="py-1 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
                           >
                             Unduh / Lihat File
                           </button>
@@ -6884,7 +6725,7 @@ export default function AdminDashboard({
                   </span>
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Kepala Keluarga</span>
                 </div>
-                <div className="p-5 bg-slate-50 dark:bg-slate-950/30 border border-slate-200/60 dark:border-orange-800/80 rounded-3xl text-center space-y-1">
+                <div className="p-5 bg-slate-50 dark:bg-slate-950/30 border border-slate-200/60 dark:border-emerald-800/80 rounded-3xl text-center space-y-1">
                   <span className="block text-2xl font-black text-slate-800 dark:text-white">{wargaList.filter(w => w.status === 'Kontrak').length} Rumah</span>
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Rumah Sewa / Kontrak</span>
                 </div>
@@ -6997,7 +6838,7 @@ export default function AdminDashboard({
                   </div>
                   <button
                     type="submit"
-                    className="py-2 px-4 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl cursor-pointer"
+                    className="py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl cursor-pointer"
                   >
                     Tambah Staff Pengurus
                   </button>
@@ -7023,7 +6864,7 @@ export default function AdminDashboard({
                         <td className="p-4 text-right font-sans flex justify-end gap-1.5">
                           <button 
                             onClick={() => openRegisterAccountModal(w)}
-                            className="py-1 px-2.5 bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400 font-bold text-[9px] rounded-lg cursor-pointer"
+                            className="py-1 px-2.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 font-bold text-[9px] rounded-lg cursor-pointer"
                           >
                             Daftarkan Akun
                           </button>
@@ -7091,7 +6932,7 @@ export default function AdminDashboard({
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between items-center pb-2 border-b border-slate-200/60 dark:border-slate-800">
                       <span className="font-semibold text-slate-500">Pemasukan</span>
-                      <span className="font-black text-orange-600 dark:text-orange-400">+{formatRupiah(totalPemasukan)}</span>
+                      <span className="font-black text-emerald-600 dark:text-emerald-400">+{formatRupiah(totalPemasukan)}</span>
                     </div>
                     <div className="flex justify-between items-center pb-2 border-b border-slate-200/60 dark:border-slate-800">
                       <span className="font-semibold text-slate-500">Pengeluaran</span>
@@ -7120,7 +6961,7 @@ export default function AdminDashboard({
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="font-semibold text-slate-500">Login Hari Ini</span>
-                      <span className="font-bold text-orange-600 dark:text-orange-400">
+                      <span className="font-bold text-emerald-600 dark:text-emerald-450">
                         {accessLogs.filter(l => new Date(l.loginTime).toDateString() === new Date().toDateString()).length} Sesi
                       </span>
                     </div>
@@ -7179,7 +7020,7 @@ export default function AdminDashboard({
                             <td className="p-4">
                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block uppercase ${
                                 log.role === 'rt' || log.role === 'admin'
-                                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400'
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
                                   : log.role === 'sekertaris'
                                   ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
                                   : log.role === 'bendahara'
@@ -7197,7 +7038,7 @@ export default function AdminDashboard({
                               {log.role === 'warga' ? (
                                 <button
                                   onClick={() => handleShowAccessProfile(log.username)}
-                                  className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
                                 >
                                   Lihat Profil
                                 </button>
@@ -7232,7 +7073,7 @@ export default function AdminDashboard({
                     onClick={() => setStatusFilter('All')}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                       statusFilter === 'All' 
-                        ? 'bg-slate-900 text-white dark:bg-slate-800 border-slate-700 shadow-md ring-2 ring-orange-500/30' 
+                        ? 'bg-slate-900 text-white dark:bg-slate-800 border-slate-700 shadow-md ring-2 ring-emerald-500/30' 
                         : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
@@ -7250,19 +7091,19 @@ export default function AdminDashboard({
                     onClick={() => setStatusFilter('SudahAkun')}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                       statusFilter === 'SudahAkun' 
-                        ? 'bg-orange-600 text-white dark:bg-orange-600 border-orange-500 shadow-md ring-2 ring-orange-500/40' 
-                        : 'bg-orange-50/50 dark:bg-orange-950/20 border-orange-200/80 dark:border-orange-900/40 hover:border-orange-300 dark:hover:border-orange-800'
+                        ? 'bg-emerald-600 text-white dark:bg-emerald-600 border-emerald-500 shadow-md ring-2 ring-emerald-500/40' 
+                        : 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-900/40 hover:border-emerald-300 dark:hover:border-emerald-800'
                     }`}
                   >
                     <div className="space-y-1">
-                      <span className={`text-[10px] font-extrabold uppercase tracking-wider ${statusFilter === 'SudahAkun' ? 'text-orange-100' : 'text-orange-600 dark:text-orange-400'}`}>
+                      <span className={`text-[10px] font-extrabold uppercase tracking-wider ${statusFilter === 'SudahAkun' ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'}`}>
                         🟢 Sudah Ada Akun
                       </span>
                       <div className={`text-2xl font-black ${statusFilter === 'SudahAkun' ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
                         {registeredAccountCount} <span className="text-xs font-normal opacity-70">Warga</span>
                       </div>
                     </div>
-                    <div className={`p-3 rounded-xl ${statusFilter === 'SudahAkun' ? 'bg-white/20 text-white' : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'}`}>
+                    <div className={`p-3 rounded-xl ${statusFilter === 'SudahAkun' ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>
                       <UserCheck className="w-5 h-5" />
                     </div>
                   </div>
@@ -7301,7 +7142,7 @@ export default function AdminDashboard({
                         placeholder="Cari warga (Nama, NIK, No. KK, Username)..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white transition-all"
                       />
                     </div>
 
@@ -7327,7 +7168,7 @@ export default function AdminDashboard({
                   {currentUser.role !== 'bendahara' && (
                     <button
                       onClick={() => openAddModal('warga')}
-                      className="py-2.5 px-5 bg-gradient-to-r from-orange-600 to-amber-500 dark:from-orange-500 dark:to-amber-400 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] hover:shadow-lg hover:shadow-orange-500/10 cursor-pointer transition-all shrink-0"
+                      className="py-2.5 px-5 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-500 dark:to-teal-400 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] hover:shadow-lg hover:shadow-emerald-500/10 cursor-pointer transition-all shrink-0"
                       title="Tambah Data Warga Baru"
                     >
                       <Plus className="w-4 h-4" />
@@ -7375,14 +7216,14 @@ export default function AdminDashboard({
                           const displayUsername = getWargaUsername(w) || w.username || w.account_username || null;
 
                           return (
-                            <tr key={w.id} className="hover:bg-orange-50/40 dark:hover:bg-slate-800/40 transition-colors">
+                            <tr key={w.id} className="hover:bg-emerald-50/40 dark:hover:bg-slate-800/40 transition-colors">
                               <td className="p-4 font-mono space-y-1">
                                 <div className="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
                                   <span>NIK: {revealedNiks[w.id] || w.nik}</span>
                                   {w.nik?.includes('x') && !revealedNiks[w.id] && (
                                     <button
                                       onClick={() => handleRevealWarga(w.id)}
-                                      className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-orange-600 hover:text-orange-700 transition-colors cursor-pointer"
+                                      className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer"
                                       title="Buka Sensor NIK"
                                     >
                                       <Eye className="w-3.5 h-3.5" />
@@ -7394,7 +7235,7 @@ export default function AdminDashboard({
                                   {w.noKk?.includes('x') && !revealedKks[w.family_id || w.fammilyId || w.id] && (
                                     <button
                                       onClick={() => handleRevealResident(w.family_id || w.fammilyId || w.id)}
-                                      className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-orange-600 hover:text-orange-700 transition-colors cursor-pointer"
+                                      className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer"
                                       title="Buka Sensor KK"
                                     >
                                       <Eye className="w-3 h-3" />
@@ -7419,14 +7260,14 @@ export default function AdminDashboard({
                               {/* Kolom Kontak / Akun Informatif Realtime */}
                               <td className="p-4 space-y-2 font-sans">
                                 <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                                  <Phone className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400 shrink-0" />
+                                  <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                   <span>{w.noHp || w.no_hp || w.telepon || '081234567890'}</span>
                                 </div>
 
                                 {isAccountCreated ? (
                                   <div className="space-y-1.5 pt-0.5">
-                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 font-extrabold text-[10px] border border-orange-500/20 shadow-xs">
-                                      <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold text-[10px] border border-emerald-500/20 shadow-xs">
+                                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                                       <span>🟢 Sudah Ada Akun</span>
                                     </span>
                                     {displayUsername && (
@@ -7448,7 +7289,7 @@ export default function AdminDashboard({
                                         <button
                                           disabled={loadingAccountId === w.id || isCreatingAccount}
                                           onClick={() => openRegisterAccountModal(w)}
-                                          className="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-extrabold rounded-xl transition-all cursor-pointer text-[10px] flex items-center gap-1.5 shadow-md hover:shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                          className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold rounded-xl transition-all cursor-pointer text-[10px] flex items-center gap-1.5 shadow-md hover:shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                                           title="Registrasi Akun Login Warga"
                                         >
                                           {loadingAccountId === w.id ? (
@@ -7481,7 +7322,7 @@ export default function AdminDashboard({
                               <div className="flex items-center justify-center gap-1.5">
                                 <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
                                   w.status === 'Tetap'
-                                    ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                     : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
                                 }`}>
                                   {w.status}
@@ -7502,10 +7343,10 @@ export default function AdminDashboard({
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                                     onClick={() => openEditModal('warga', w)}
-                                    className="p-2 border border-slate-200 dark:border-slate-800 hover:border-orange-500 dark:hover:border-orange-500 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl transition-all cursor-pointer"
+                                    className="p-2 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl transition-all cursor-pointer"
                                     title="Edit Data Warga"
                                   >
-                                    <Edit className="w-3.5 h-3.5 text-slate-500 hover:text-orange-500" />
+                                    <Edit className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-500" />
                                   </button>
                                   <button
                                     onClick={() => handleDelete('warga', w.id)}
@@ -7533,8 +7374,8 @@ export default function AdminDashboard({
               
               {/* Financial mini dashboard */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-b border-slate-100 dark:border-slate-800 pb-6">
-                <div className="p-4 bg-orange-500/5 dark:bg-orange-500/10 border border-orange-500/10 dark:border-orange-500/25 rounded-2xl">
-                  <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 font-bold text-xs mb-1.5">
+                <div className="p-4 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/10 dark:border-emerald-500/25 rounded-2xl">
+                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs mb-1.5">
                     <TrendingUp className="w-4 h-4" />
                     <span>Total Pemasukan</span>
                   </div>
@@ -7547,8 +7388,8 @@ export default function AdminDashboard({
                   </div>
                   <span className="block text-xl font-black text-slate-900 dark:text-white">{formatRupiah(totalPengeluaran)}</span>
                 </div>
-                <div className="p-4 bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/10 dark:border-amber-500/25 rounded-2xl">
-                  <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-xs mb-1.5">
+                <div className="p-4 bg-teal-500/5 dark:bg-teal-500/10 border border-teal-500/10 dark:border-teal-500/25 rounded-2xl">
+                  <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400 font-bold text-xs mb-1.5">
                     <Wallet className="w-4 h-4" />
                     <span>Saldo Akhir Kas</span>
                   </div>
@@ -7562,7 +7403,7 @@ export default function AdminDashboard({
                   onClick={() => { setKasSubTab('transaksi'); setSearchQuery(''); }}
                   className={`py-3 px-6 text-xs font-bold border-b-2 transition-all cursor-pointer ${
                     kasSubTab === 'transaksi'
-                      ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+                      ? 'border-emerald-500 text-emerald-600 dark:text-emerald-450'
                       : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
                   }`}
                 >
@@ -7572,7 +7413,7 @@ export default function AdminDashboard({
                   onClick={() => { setKasSubTab('tunggakan'); setSearchQuery(''); }}
                   className={`py-3 px-6 text-xs font-bold border-b-2 transition-all cursor-pointer ${
                     kasSubTab === 'tunggakan'
-                      ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+                      ? 'border-emerald-500 text-emerald-600 dark:text-emerald-450'
                       : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
                   }`}
                 >
@@ -7591,7 +7432,7 @@ export default function AdminDashboard({
                         placeholder="Cari transaksi..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white transition-all"
                       />
                     </div>
 
@@ -7604,7 +7445,7 @@ export default function AdminDashboard({
                       </button>
                       <button
                         onClick={() => openAddModal('kas')}
-                        className="py-2.5 px-5 bg-gradient-to-r from-orange-600 to-amber-500 dark:from-orange-500 dark:to-amber-400 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] hover:shadow-lg hover:shadow-orange-500/10 cursor-pointer transition-all"
+                        className="py-2.5 px-5 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-500 dark:to-teal-400 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] hover:shadow-lg hover:shadow-emerald-500/10 cursor-pointer transition-all"
                       >
                         <Plus className="w-4 h-4" />
                         <span>Catat Transaksi</span>
@@ -7643,14 +7484,14 @@ export default function AdminDashboard({
                               <td className="p-4 text-center">
                                 <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] inline-block ${
                                   t.type === 'income'
-                                    ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                     : 'bg-rose-500/10 text-rose-600 dark:text-rose-455'
                                 }`}>
                                   {t.type === 'income' ? 'Masuk' : 'Keluar'}
                                 </span>
                               </td>
                               <td className={`p-4 text-right font-bold text-sm font-mono ${
-                                t.type === 'income' ? 'text-orange-600 dark:text-orange-400' : 'text-rose-600 dark:text-rose-455'
+                                t.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-455'
                               }`}>
                                 {t.type === 'income' ? '+' : '-'}{formatRupiah(t.amount).replace('Rp', 'Rp ')}
                               </td>
@@ -7658,10 +7499,10 @@ export default function AdminDashboard({
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button
                                     onClick={() => openEditModal('kas', t)}
-                                    className="p-2 border border-slate-200 dark:border-slate-800 hover:border-orange-500 dark:hover:border-orange-500 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-lg transition-all cursor-pointer"
+                                    className="p-2 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-lg transition-all cursor-pointer"
                                     title="Edit Transaksi"
                                   >
-                                    <Edit className="w-3.5 h-3.5 text-slate-500 hover:text-orange-500" />
+                                    <Edit className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-500" />
                                   </button>
                                   <button
                                     onClick={() => handleDelete('kas', t.id)}
@@ -7689,7 +7530,7 @@ export default function AdminDashboard({
                       placeholder="Cari nama warga..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white transition-all"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white transition-all"
                     />
                   </div>
 
@@ -7720,7 +7561,7 @@ export default function AdminDashboard({
                                 <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg ${
                                   w.statusIuran?.includes('Menunggak')
                                     ? 'bg-rose-500/10 text-rose-500'
-                                    : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450'
                                 }`}>
                                   {w.statusIuran || 'Lunas'}
                                 </span>
@@ -7729,7 +7570,7 @@ export default function AdminDashboard({
                                 {w.statusIuran?.includes('Menunggak') ? (
                                   <button
                                     onClick={() => handleUpdateIuranStatus(w.id, 'Lunas')}
-                                    className="py-1.5 px-3 bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                    className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
                                   >
                                     Konfirmasi Lunas
                                   </button>
@@ -7803,7 +7644,7 @@ export default function AdminDashboard({
                       </div>
                       <button
                         type="submit"
-                        className="py-1 px-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg cursor-pointer transition-colors"
+                        className="py-1 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg cursor-pointer transition-colors"
                       >
                         Update
                       </button>
@@ -7814,7 +7655,7 @@ export default function AdminDashboard({
                   {jenisIuranList.map((j) => (
                     <div key={j.id} className="p-6 bg-slate-50 dark:bg-slate-950/40 border border-slate-200/60 dark:border-slate-800 rounded-3xl space-y-4 hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start">
-                        <div className="p-3 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-2xl">
+                        <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl">
                           <Wallet className="w-5 h-5" />
                         </div>
                         <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md text-[10px] font-bold font-mono">{j.frequency}</span>
@@ -7825,7 +7666,7 @@ export default function AdminDashboard({
                       </div>
                       <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex justify-between items-center">
                         <span className="text-xs text-slate-400">Tarif/KK</span>
-                        <span className="font-black text-sm text-orange-600 dark:text-orange-400">{formatRupiah(j.amount)}</span>
+                        <span className="font-black text-sm text-emerald-600 dark:text-emerald-400">{formatRupiah(j.amount)}</span>
                       </div>
                     </div>
                   ))}
@@ -7900,7 +7741,7 @@ export default function AdminDashboard({
                   <div className="flex items-end">
                     <button
                       type="submit"
-                      className="w-full py-2.5 px-4 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all"
+                      className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Buat Draft Periode</span>
@@ -7918,7 +7759,7 @@ export default function AdminDashboard({
                   </div>
                   <button
                     onClick={fetchBillPeriods}
-                    className="py-1 px-3 border border-slate-200 dark:border-slate-800 hover:border-orange-500 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400 cursor-pointer"
+                    className="py-1 px-3 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400 cursor-pointer"
                   >
                     🔄 Segarkan
                   </button>
@@ -7926,7 +7767,7 @@ export default function AdminDashboard({
 
                 {isLoadingBillPeriods ? (
                   <div className="p-8 text-center flex flex-col items-center justify-center space-y-3">
-                    <div className="w-7 h-7 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-7 h-7 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                     <p className="text-xs text-slate-400 font-bold">Memuat periode tagihan...</p>
                   </div>
                 ) : billPeriodsList.length === 0 ? (
@@ -7955,7 +7796,7 @@ export default function AdminDashboard({
                               <td className="p-4 font-mono text-slate-600 dark:text-slate-300">
                                 {p.period_month} / {p.period_year}
                               </td>
-                              <td className="p-4 font-bold text-orange-600 dark:text-orange-400 font-mono">
+                              <td className="p-4 font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                                 {formatRupiah(p.default_amount || 200000)}
                               </td>
                               <td className="p-4 font-mono text-slate-500">
@@ -7965,7 +7806,7 @@ export default function AdminDashboard({
                                 <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase ${
                                   isDraft
                                     ? 'bg-amber-500/10 text-amber-500'
-                                    : 'bg-orange-500/10 text-orange-500'
+                                    : 'bg-emerald-500/10 text-emerald-500'
                                 }`}>
                                   {p.status || 'draft'}
                                 </span>
@@ -7975,7 +7816,7 @@ export default function AdminDashboard({
                                   {isDraft && (
                                     <button
                                       onClick={() => handlePublishBillPeriod(p.id, p.title || `Bulan ${p.period_month}/${p.period_year}`)}
-                                      className="py-1 px-2.5 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                      className="py-1 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] rounded-lg transition-colors cursor-pointer"
                                       title="Publish tagihan ke seluruh warga aktif"
                                     >
                                       🚀 Publish Tagihan
@@ -8021,7 +7862,7 @@ export default function AdminDashboard({
 
                     {isLoadingPeriodDetails ? (
                       <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
-                        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                         <p className="text-xs text-slate-400 font-bold">Memuat rekap tagihan periode...</p>
                       </div>
                     ) : (
@@ -8033,9 +7874,9 @@ export default function AdminDashboard({
                               <span className="text-[10px] font-bold text-slate-400 uppercase">Total Tagihan</span>
                               <div className="text-lg font-black text-slate-900 dark:text-white">{selectedPeriodSummary.total_bills || selectedPeriodBills.length || 0}</div>
                             </div>
-                            <div className="p-4 bg-orange-500/5 border border-orange-500/20 rounded-2xl">
-                              <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase">Lunas (Paid)</span>
-                              <div className="text-lg font-black text-orange-600 dark:text-orange-400">{selectedPeriodSummary.paid_bills || selectedPeriodBills.filter(b => b.status === 'paid').length || 0}</div>
+                            <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl">
+                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Lunas (Paid)</span>
+                              <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">{selectedPeriodSummary.paid_bills || selectedPeriodBills.filter(b => b.status === 'paid').length || 0}</div>
                             </div>
                             <div className="p-4 bg-rose-500/5 border border-rose-500/20 rounded-2xl">
                               <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase">Tunggakan</span>
@@ -8071,12 +7912,12 @@ export default function AdminDashboard({
                                     <td className="p-3 text-slate-500 font-mono text-[11px]">
                                       {b.house_blok || b.blok ? `Blok ${b.house_blok || b.blok} No. ${b.house_nomor || b.nomor || ''}` : '-'}
                                     </td>
-                                    <td className="p-3 font-bold font-mono text-orange-600 dark:text-orange-400">
+                                    <td className="p-3 font-bold font-mono text-emerald-600 dark:text-emerald-400">
                                       {formatRupiah(b.amount || 200000)}
                                     </td>
                                     <td className="p-3 text-center">
                                       <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded uppercase ${
-                                        b.status === 'paid' ? 'bg-orange-500/10 text-orange-600' :
+                                        b.status === 'paid' ? 'bg-emerald-500/10 text-emerald-600' :
                                         b.status === 'exempt' ? 'bg-purple-500/10 text-purple-600' :
                                         b.status === 'waiting_verification' ? 'bg-amber-500/10 text-amber-600' :
                                         'bg-rose-500/10 text-rose-600'
@@ -8098,7 +7939,7 @@ export default function AdminDashboard({
                                         <span className="text-[10px] text-purple-400 italic">Dibebaskan</span>
                                       )}
                                       {b.status === 'paid' && (
-                                        <span className="text-[10px] text-orange-500 font-bold">Lunas</span>
+                                        <span className="text-[10px] text-emerald-500 font-bold">Lunas</span>
                                       )}
                                     </td>
                                   </tr>
@@ -8127,7 +7968,7 @@ export default function AdminDashboard({
               {/* Header */}
               <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-orange-500/10 text-orange-500 rounded-2xl flex items-center justify-center font-bold text-lg">
+                  <div className="w-10 h-10 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center font-bold text-lg">
                     💵
                   </div>
                   <div>
@@ -8138,14 +7979,14 @@ export default function AdminDashboard({
               </div>
 
               {/* Informational Context Card */}
-              <div className="p-4 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-500/20 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
+              <div className="p-4 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
                 <div className="space-y-0.5">
-                  <span className="text-[10px] uppercase font-black tracking-wider text-orange-600 dark:text-orange-400">Petugas Penerima Setoran Cash:</span>
+                  <span className="text-[10px] uppercase font-black tracking-wider text-emerald-600 dark:text-emerald-400">Petugas Penerima Setoran Cash:</span>
                   <p className="font-bold text-slate-800 dark:text-slate-200">
-                    {currentUser?.username || 'Pengurus RT'} • <span className="uppercase text-orange-500 font-extrabold">{currentUser?.role === 'rt' ? 'Ketua RT' : currentUser?.role === 'bendahara' ? 'Bendahara' : currentUser?.role === 'sekretaris' ? 'Sekretaris' : 'Admin'}</span>
+                    {currentUser?.username || 'Pengurus RT'} • <span className="uppercase text-emerald-500 font-extrabold">{currentUser?.role === 'rt' ? 'Ketua RT' : currentUser?.role === 'bendahara' ? 'Bendahara' : currentUser?.role === 'sekretaris' ? 'Sekretaris' : 'Admin'}</span>
                   </p>
                 </div>
-                <div className="px-3 py-1.5 bg-orange-600/10 border border-orange-500/30 rounded-xl text-orange-600 dark:text-orange-400 font-bold text-[11px] flex items-center gap-1.5">
+                <div className="px-3 py-1.5 bg-emerald-600/10 border border-emerald-500/30 rounded-xl text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1.5">
                   <span>✓ Jalur Pembayaran Tunai Langsung</span>
                 </div>
               </div>
@@ -8159,7 +8000,7 @@ export default function AdminDashboard({
                     <button
                       type="button"
                       onClick={fetchKepalaKeluargaList}
-                      className="text-[10px] font-bold text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       🔄 Segarkan List Warga
                     </button>
@@ -8218,7 +8059,7 @@ export default function AdminDashboard({
                         <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Pilih Periode Tagihan Yang Dibayar Tunai:</span>
                         <span className="text-[10px] text-slate-400">Centang 1 atau beberapa tagihan sekaligus jika warga membayar rapel.</span>
                       </div>
-                      {isLoadingFamilyBills && <span className="text-[10px] text-orange-500 font-bold animate-pulse">Memeriksa tagihan...</span>}
+                      {isLoadingFamilyBills && <span className="text-[10px] text-emerald-500 font-bold animate-pulse">Memeriksa tagihan...</span>}
                     </div>
 
                     {familyUnpaidBills.length > 0 ? (
@@ -8244,7 +8085,7 @@ export default function AdminDashboard({
                               }}
                               className={`p-3 border rounded-xl flex items-center justify-between cursor-pointer transition-all ${
                                 isChecked
-                                  ? 'bg-orange-500/10 border-orange-500 text-orange-900 dark:text-orange-200'
+                                  ? 'bg-emerald-500/10 border-emerald-500 text-emerald-900 dark:text-emerald-200'
                                   : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900'
                               }`}
                             >
@@ -8253,7 +8094,7 @@ export default function AdminDashboard({
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={() => {}}
-                                  className="rounded text-orange-600 focus:ring-orange-500 w-4 h-4 cursor-pointer"
+                                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
                                 />
                                 <div>
                                   <p className="font-bold text-xs text-slate-900 dark:text-white">
@@ -8311,7 +8152,7 @@ export default function AdminDashboard({
                 <div className="pt-2 flex items-center justify-between">
                   <button
                     type="submit"
-                    className="py-3 px-6 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-white font-black rounded-xl flex items-center gap-2 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-lg shadow-orange-600/20 text-xs sm:text-sm"
+                    className="py-3 px-6 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white font-black rounded-xl flex items-center gap-2 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-lg shadow-emerald-600/20 text-xs sm:text-sm"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     <span>Terbitkan & Simpan Setoran Tunai (Lunas)</span>
@@ -8335,7 +8176,7 @@ export default function AdminDashboard({
                   <button
                     onClick={() => setAuditTab('ipl')}
                     className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-                      auditTab === 'ipl' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      auditTab === 'ipl' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                     }`}
                   >
                     Audit IPL ({auditIplList.length})
@@ -8343,7 +8184,7 @@ export default function AdminDashboard({
                   <button
                     onClick={() => setAuditTab('kas')}
                     className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-                      auditTab === 'kas' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      auditTab === 'kas' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                     }`}
                   >
                     Audit Kas ({auditKasList.length})
@@ -8351,7 +8192,7 @@ export default function AdminDashboard({
                   <button
                     onClick={() => setAuditTab('ledger')}
                     className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-                      auditTab === 'ledger' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      auditTab === 'ledger' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                     }`}
                   >
                     Buku Kas RT
@@ -8361,7 +8202,7 @@ export default function AdminDashboard({
 
               {isLoadingAudit ? (
                 <div className="p-8 text-center flex flex-col items-center justify-center space-y-3">
-                  <div className="w-7 h-7 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-7 h-7 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                   <p className="text-xs text-slate-400 font-bold">Memuat log audit...</p>
                 </div>
               ) : auditTab === 'ipl' ? (
@@ -8391,12 +8232,12 @@ export default function AdminDashboard({
                             <div className="font-semibold text-slate-700 dark:text-slate-300">Bulan {a.month} / {a.year}</div>
                             <span className="text-[10px] font-mono px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-500 uppercase">{a.payment_method || 'transfer'}</span>
                           </td>
-                          <td className="p-4 font-black font-mono text-orange-600 dark:text-orange-400">
+                          <td className="p-4 font-black font-mono text-emerald-600 dark:text-emerald-400">
                             {formatRupiah(a.amount || 200000)}
                           </td>
                           <td className="p-4 text-center">
                             <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase ${
-                              a.status === 'approved' || a.status === 'Disetujui' ? 'bg-orange-500/10 text-orange-500 dark:text-orange-500 border border-orange-500/20' :
+                              a.status === 'approved' || a.status === 'Disetujui' ? 'bg-emerald-500/10 text-emerald-500' :
                               a.status === 'rejected' || a.status === 'Ditolak' ? 'bg-rose-500/10 text-rose-500' :
                               'bg-amber-500/10 text-amber-500'
                             }`}>
@@ -8443,15 +8284,15 @@ export default function AdminDashboard({
                             {a.warga_nama || `Keluarga #${a.family_id || a.id_family}`}
                           </td>
                           <td className="p-4 space-y-0.5">
-                            <span className="font-bold text-orange-600 dark:text-orange-400 uppercase text-[10px] tracking-wider block">[{a.category || 'Kas'}]</span>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400 uppercase text-[10px] tracking-wider block">[{a.category || 'Kas'}]</span>
                             <div className="text-slate-700 dark:text-slate-300 font-medium">{a.description || '-'}</div>
                           </td>
-                          <td className="p-4 font-black font-mono text-orange-600 dark:text-orange-400">
+                          <td className="p-4 font-black font-mono text-emerald-600 dark:text-emerald-400">
                             {formatRupiah(a.amount || 0)}
                           </td>
                           <td className="p-4 text-center">
                             <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase ${
-                              a.status === 'approved' || a.status === 'Disetujui' ? 'bg-orange-500/10 text-orange-500 dark:text-orange-500 border border-orange-500/20' :
+                              a.status === 'approved' || a.status === 'Disetujui' ? 'bg-emerald-500/10 text-emerald-500' :
                               a.status === 'rejected' || a.status === 'Ditolak' ? 'bg-rose-500/10 text-rose-500' :
                               'bg-amber-500/10 text-amber-500'
                             }`}>
@@ -8496,7 +8337,7 @@ export default function AdminDashboard({
                             <td className="p-4 font-semibold text-slate-900 dark:text-white font-sans">
                               {t.description}
                             </td>
-                            <td className="p-4 text-right font-black text-sm text-orange-600 dark:text-orange-400 font-mono">
+                            <td className="p-4 text-right font-black text-sm text-emerald-600 dark:text-emerald-400 font-mono">
                               +{formatRupiah(t.amount)}
                             </td>
                           </tr>
@@ -8548,7 +8389,7 @@ export default function AdminDashboard({
                   </div>
                   <button
                     onClick={fetchFinanceTracking}
-                    className="py-1 px-2.5 border border-slate-200 dark:border-slate-800 hover:border-orange-500 rounded-lg text-[10px] font-bold text-slate-550 dark:text-slate-400 cursor-pointer animate-none"
+                    className="py-1 px-2.5 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 rounded-lg text-[10px] font-bold text-slate-550 dark:text-slate-400 cursor-pointer animate-none"
                   >
                     🔄 Segarkan
                   </button>
@@ -8557,7 +8398,7 @@ export default function AdminDashboard({
 
               {isLoadingFinanceTracking ? (
                 <div className="p-12 text-center flex flex-col items-center justify-center space-y-4">
-                  <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                   <p className="text-xs font-bold text-slate-500">Memuat data tracking tunggakan...</p>
                 </div>
               ) : financeTrackingError ? (
@@ -8591,7 +8432,7 @@ export default function AdminDashboard({
                                 {h.no_kk?.includes('x') && !revealedKks[h.family_id] && (
                                   <button
                                     onClick={() => handleRevealResident(h.family_id)}
-                                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-orange-600 hover:text-orange-700 transition-colors cursor-pointer inline-flex items-center"
+                                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer inline-flex items-center"
                                     title="Buka Sensor KK"
                                   >
                                     <Eye className="w-3.5 h-3.5" />
@@ -8612,7 +8453,7 @@ export default function AdminDashboard({
                               <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg ${
                                 isMenunggak
                                   ? 'bg-rose-500/10 text-rose-500'
-                                  : 'bg-orange-500/10 text-orange-500'
+                                  : 'bg-emerald-500/10 text-emerald-500'
                               }`}>
                                 {h.status}
                               </span>
@@ -8652,7 +8493,7 @@ export default function AdminDashboard({
                 </div>
                 <button
                   onClick={fetchPendingPayments}
-                  className="py-1 px-2.5 border border-slate-200 dark:border-slate-800 hover:border-orange-500 rounded-lg text-[10px] font-bold text-slate-550 dark:text-slate-400 cursor-pointer animate-none"
+                  className="py-1 px-2.5 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 rounded-lg text-[10px] font-bold text-slate-550 dark:text-slate-400 cursor-pointer animate-none"
                 >
                   🔄 Segarkan
                 </button>
@@ -8660,7 +8501,7 @@ export default function AdminDashboard({
 
               {isLoadingPendingPayments ? (
                 <div className="p-12 text-center flex flex-col items-center justify-center space-y-4">
-                  <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                   <p className="text-xs font-bold text-slate-500">Memuat antrean verifikasi...</p>
                 </div>
               ) : pendingPaymentsError ? (
@@ -8706,7 +8547,7 @@ export default function AdminDashboard({
                                 <td className="p-4 text-slate-600 dark:text-slate-300 font-mono text-[11px]">
                                   {formatDateTimeIndo(b.payment_date || b.created_at)}
                                 </td>
-                                <td className="p-4 font-bold text-orange-600 dark:text-orange-400">
+                                <td className="p-4 font-bold text-emerald-600 dark:text-emerald-400">
                                   {formatPeriodLabel(b, 'ipl')}
                                 </td>
                                 <td className="p-4 font-black font-mono text-slate-900 dark:text-white">
@@ -8731,7 +8572,7 @@ export default function AdminDashboard({
                                     </button>
                                     <button
                                       onClick={() => handleVerifyPendingPayment('ipl', b.id, 'diterima')}
-                                      className="py-1 px-2.5 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                      className="py-1 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] rounded-lg transition-colors cursor-pointer"
                                     >
                                       Setujui
                                     </button>
@@ -8797,7 +8638,7 @@ export default function AdminDashboard({
                                   <span className="font-bold text-slate-800 dark:text-slate-200 block capitalize">{b.category}</span>
                                   <span className="text-[10px] text-slate-400 block italic">"{b.description}"</span>
                                 </td>
-                                <td className="p-4 font-black text-orange-600 dark:text-orange-400 font-mono">
+                                <td className="p-4 font-black text-emerald-600 dark:text-emerald-400 font-mono">
                                   +{formatRupiah(b.amount)}
                                 </td>
                                 <td className="p-4 max-w-xs truncate text-slate-455 font-mono text-[11px]" title={b.payment_proof}>
@@ -8819,7 +8660,7 @@ export default function AdminDashboard({
                                     </button>
                                     <button
                                       onClick={() => handleVerifyPendingPayment('kas', b.id, 'diterima')}
-                                      className="py-1 px-2.5 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                      className="py-1 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] rounded-lg transition-colors cursor-pointer"
                                     >
                                       Setujui
                                     </button>
@@ -8958,7 +8799,7 @@ export default function AdminDashboard({
                 <div className="pt-3">
                   <button
                     type="submit"
-                    className="py-3 px-6 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-md"
+                    className="py-3 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-md"
                   >
                     Simpan Pemasukan
                   </button>
@@ -9110,7 +8951,7 @@ export default function AdminDashboard({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-5 bg-orange-500/5 dark:bg-orange-500/10 border border-orange-500/10 dark:border-orange-500/20 rounded-2xl shadow-xs">
+                <div className="p-5 bg-emerald-550/5 dark:bg-emerald-500/10 border border-emerald-500/10 dark:border-emerald-500/20 rounded-2xl shadow-xs">
                   <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block mb-1">Total Pemasukan</span>
                   <span className="block text-xl font-black text-slate-900 dark:text-white">{formatRupiah(totalPemasukan)}</span>
                 </div>
@@ -9118,7 +8959,7 @@ export default function AdminDashboard({
                   <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block mb-1">Total Pengeluaran</span>
                   <span className="block text-xl font-black text-slate-900 dark:text-white">{formatRupiah(totalPengeluaran)}</span>
                 </div>
-                <div className="p-5 bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/10 dark:border-amber-500/20 rounded-2xl shadow-xs">
+                <div className="p-5 bg-teal-550/5 dark:bg-teal-500/10 border border-teal-500/10 dark:border-teal-500/20 rounded-2xl shadow-xs">
                   <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block mb-1">Saldo Akhir Kas</span>
                   <span className="block text-xl font-black text-slate-900 dark:text-white">{formatRupiah(sisaKas)}</span>
                 </div>
@@ -9151,14 +8992,14 @@ export default function AdminDashboard({
                         <td className="p-4 text-center">
                           <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] inline-block ${
                             t.type === 'income'
-                              ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                               : 'bg-rose-500/10 text-rose-600 dark:text-rose-455'
                           }`}>
                             {t.type === 'income' ? 'Masuk' : 'Keluar'}
                           </span>
                         </td>
                         <td className={`p-4 text-right font-bold text-sm font-mono ${
-                          t.type === 'income' ? 'text-orange-600 dark:text-orange-400' : 'text-rose-600 dark:text-rose-455'
+                          t.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-455'
                         }`}>
                           {t.type === 'income' ? '+' : '-'}{formatRupiah(t.amount).replace('Rp', 'Rp ')}
                         </td>
@@ -9181,9 +9022,9 @@ export default function AdminDashboard({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                 {/* Bank account details card */}
                 <div className="p-6 bg-gradient-to-tr from-slate-900 to-slate-950 text-white rounded-3xl space-y-6 border border-slate-800 shadow-xl relative overflow-hidden">
-                  <div className="absolute right-[-20px] top-[-20px] w-24 h-24 bg-orange-500/10 rounded-full blur-2xl"></div>
+                  <div className="absolute right-[-20px] top-[-20px] w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl"></div>
                   <div className="flex justify-between items-center">
-                    <span className="font-extrabold text-xs text-orange-400 uppercase tracking-widest">KARTU DEBIT RT 05</span>
+                    <span className="font-extrabold text-xs text-emerald-450 uppercase tracking-widest">KARTU DEBIT RT 05</span>
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">BANK MANDIRI</span>
                   </div>
                   <div className="space-y-1.5 pt-4 font-sans">
@@ -9195,13 +9036,13 @@ export default function AdminDashboard({
                       <span className="text-slate-500 text-[9px] font-bold uppercase tracking-wider block">Pemilik Rekening</span>
                       <p className="text-xs font-black text-slate-200">KAS RT 05 SAWANGAN GREEN PARK</p>
                     </div>
-                    <span className="text-[10px] px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-md font-bold">AKTIF</span>
+                    <span className="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-md font-bold">AKTIF</span>
                   </div>
                 </div>
 
                 {/* Stylized QRIS Placeholder */}
                 <div className="p-6 bg-slate-50 dark:bg-slate-950/40 border border-slate-200/60 dark:border-slate-800 rounded-3xl flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="p-1.5 bg-white rounded-2xl border-4 border-orange-500 shadow-lg">
+                  <div className="p-1.5 bg-white rounded-2xl border-4 border-emerald-500 shadow-lg">
                     {/* Simulated QR Grid with CSS */}
                     <div className="w-40 h-40 bg-slate-100 flex flex-col items-center justify-center p-2 relative overflow-hidden select-none">
                       <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-slate-900"></div>
@@ -9232,7 +9073,7 @@ export default function AdminDashboard({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Income categories summary */}
                 <div className="p-6 bg-slate-50 dark:bg-slate-950/40 border border-slate-200/60 dark:border-slate-800 rounded-3xl space-y-4">
-                  <h4 className="font-extrabold text-xs text-orange-600 dark:text-orange-400 uppercase tracking-wider">Breakdown Pemasukan</h4>
+                  <h4 className="font-extrabold text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Breakdown Pemasukan</h4>
                   <div className="space-y-3 text-xs">
                     <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-850">
                       <span className="text-slate-500 font-bold">Iuran Wajib Bulanan</span>
@@ -9242,7 +9083,7 @@ export default function AdminDashboard({
                       <span className="text-slate-500 font-bold">Sumbangan & Donasi</span>
                       <span className="font-black text-slate-900 dark:text-white">{formatRupiah(transaksiKasList.filter(t => t.category === 'Donasi').reduce((a,c) => a+c.amount,0))}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2 font-black text-orange-500">
+                    <div className="flex justify-between items-center py-2 font-black text-emerald-650">
                       <span>Total Pemasukan Bulan Ini</span>
                       <span>{formatRupiah(totalPemasukan)}</span>
                     </div>
@@ -9288,13 +9129,13 @@ export default function AdminDashboard({
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-850">
                     <span className="text-slate-500 font-bold">Pemasukan Berjalan (Juli)</span>
-                    <span className="font-black text-orange-600">{formatRupiah(totalPemasukan)}</span>
+                    <span className="font-black text-emerald-600">{formatRupiah(totalPemasukan)}</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-850">
                     <span className="text-slate-500 font-bold">Pengeluaran Berjalan (Juli)</span>
                     <span className="font-black text-rose-500">-{formatRupiah(totalPengeluaran)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 font-black text-sm text-orange-600 dark:text-orange-400">
+                  <div className="flex justify-between items-center py-2 font-black text-sm text-emerald-600 dark:text-emerald-400">
                     <span>Proyeksi Saldo Bersih Kumulatif Akhir Tahun</span>
                     <span>{formatRupiah(7500000 + sisaKas)}</span>
                   </div>
@@ -9331,13 +9172,13 @@ export default function AdminDashboard({
                             {w.name}
                             <span className="block text-[9px] text-slate-400 font-mono mt-0.5">ID: {w.id}</span>
                           </td>
-                          <td className="p-2 text-center text-orange-500 font-bold text-sm">✓</td>
-                          <td className="p-2 text-center text-orange-500 font-bold text-sm">✓</td>
+                          <td className="p-2 text-center text-emerald-500 font-bold text-sm">✓</td>
+                          <td className="p-2 text-center text-emerald-500 font-bold text-sm">✓</td>
                           <td className="p-2 text-center">
                             {w.statusIuran?.includes('Menunggak') ? (
                               <span className="text-rose-500 font-black text-sm">✗</span>
                             ) : (
-                              <span className="text-orange-500 font-black text-sm">✓</span>
+                              <span className="text-emerald-500 font-black text-sm">✓</span>
                             )}
                           </td>
                           <td className="p-2 text-center text-slate-450 italic">Pending</td>
@@ -9363,7 +9204,7 @@ export default function AdminDashboard({
                   <p className="text-xs text-slate-400">Cetak lembar laporan fisik transaksi kas masuk & keluar RT secara formal.</p>
                   <button
                     onClick={handlePrintKasReport}
-                    className="py-2.5 px-4 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer"
+                    className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer"
                   >
                     Cetak Buku Kas RT
                   </button>
@@ -9396,7 +9237,7 @@ export default function AdminDashboard({
                         alert(`Gagal mengekspor CSV: ${err.message}`);
                       }
                     }}
-                    className="py-2.5 px-4 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer"
+                    className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer"
                   >
                     Ekspor CSV Spreadsheet
                   </button>
@@ -9420,13 +9261,13 @@ export default function AdminDashboard({
                       setSearchQuery(e.target.value);
                       if (fetchAgendas) fetchAgendas(e.target.value);
                     }}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white transition-all"
                   />
                 </div>
 
                 <button
                   onClick={() => openAddModal('agenda')}
-                  className="py-2.5 px-5 bg-gradient-to-r from-orange-600 to-amber-500 dark:from-orange-500 dark:to-amber-400 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] hover:shadow-lg hover:shadow-orange-500/10 cursor-pointer transition-all"
+                  className="py-2.5 px-5 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-500 dark:to-teal-400 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] hover:shadow-lg hover:shadow-emerald-500/10 cursor-pointer transition-all"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Agenda Baru</span>
@@ -9440,13 +9281,13 @@ export default function AdminDashboard({
                   .map((a) => (
                     <div key={a.id} className="relative bg-slate-50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800 rounded-3xl p-6 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between overflow-hidden">
                       {/* Top Accent line */}
-                      <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500"></div>
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500"></div>
                       
                       <div className="space-y-4">
                         {/* Title & Badge */}
                         <div className="flex justify-between items-start gap-3">
                           <div>
-                            <span className="text-[10px] text-orange-600 dark:text-orange-400 uppercase font-black tracking-widest">{a.category}</span>
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-450 uppercase font-black tracking-widest">{a.category}</span>
                             <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5 leading-tight">{a.title}</h4>
                           </div>
                           <span className="text-[9px] px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-500 font-mono rounded font-semibold">{a.id}</span>
@@ -9474,7 +9315,7 @@ export default function AdminDashboard({
                       <div className="flex justify-end gap-2 mt-5 pt-3 border-t border-slate-200/60 dark:border-slate-800">
                         <button
                           onClick={() => openEditModal('agenda', a)}
-                          className="px-3.5 py-1.5 border border-slate-200 dark:border-slate-800 hover:border-orange-500 hover:bg-slate-100 dark:hover:bg-slate-900 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 flex items-center gap-1.5 cursor-pointer transition-all"
+                          className="px-3.5 py-1.5 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:bg-slate-100 dark:hover:bg-slate-900 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center gap-1.5 cursor-pointer transition-all"
                         >
                           <Edit className="w-3.5 h-3.5" />
                           <span>Edit</span>
@@ -9507,7 +9348,7 @@ export default function AdminDashboard({
                     placeholder="Cari pengajuan berdasarkan nama warga..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white transition-all"
                   />
                 </div>
               </div>
@@ -9539,7 +9380,7 @@ export default function AdminDashboard({
                             <div className="text-[10px] text-slate-400 font-mono">NIK: {sub.wargaNik} | KK: {sub.wargaNoKk}</div>
                             <div className="text-[10px] text-slate-500">Alamat: {sub.wargaAlamat}</div>
                           </td>
-                          <td className="p-4 font-bold text-orange-600 dark:text-orange-400">
+                          <td className="p-4 font-bold text-emerald-600 dark:text-emerald-450">
                             {sub.wargaTipeSurat}
                           </td>
                           <td className="p-4 italic max-w-[200px] whitespace-normal break-words text-slate-600 dark:text-slate-300">
@@ -9549,7 +9390,7 @@ export default function AdminDashboard({
                             <div className="flex flex-col items-center gap-1">
                               <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg inline-block ${
                                 sub.status === 'Approved'
-                                  ? 'bg-orange-50 dark:bg-orange-950/20 text-orange-600'
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600'
                                   : sub.status === 'Rejected'
                                   ? 'bg-red-50 dark:bg-red-950/20 text-red-600'
                                   : sub.status === 'Completed'
@@ -9570,7 +9411,7 @@ export default function AdminDashboard({
                                 <>
                                   <button
                                     onClick={() => handleSubmissionStatus(sub.id, 'Approved')}
-                                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                                    className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all"
                                     title="Setujui"
                                   >
                                     <Check className="w-3 h-3" />
@@ -9639,7 +9480,7 @@ export default function AdminDashboard({
                         required
                         value={adminOldPassword}
                         onChange={(e) => setAdminOldPassword(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white font-semibold" 
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-505 text-slate-900 dark:text-white font-semibold" 
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -9650,7 +9491,7 @@ export default function AdminDashboard({
                         required
                         value={adminNewPassword}
                         onChange={(e) => setAdminNewPassword(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white font-semibold" 
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-505 text-slate-900 dark:text-white font-semibold" 
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -9661,13 +9502,13 @@ export default function AdminDashboard({
                         required
                         value={adminConfirmPassword}
                         onChange={(e) => setAdminConfirmPassword(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white font-semibold" 
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-505 text-slate-900 dark:text-white font-semibold" 
                       />
                     </div>
                     <button 
                       type="submit" 
                       disabled={isAdminChangingPassword}
-                      className="py-2.5 px-5 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-bold text-xs rounded-xl cursor-pointer transition-colors"
+                      className="py-2.5 px-5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-450 text-white font-bold text-xs rounded-xl cursor-pointer transition-colors"
                     >
                       {isAdminChangingPassword ? 'Memperbarui...' : 'Perbarui Kata Sandi'}
                     </button>
@@ -9730,7 +9571,7 @@ export default function AdminDashboard({
                     placeholder="Cari aktivitas berdasarkan nama/username..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white transition-all"
                   />
                 </div>
                 <button
@@ -9786,7 +9627,7 @@ export default function AdminDashboard({
                             <td className="p-4">
                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block uppercase ${
                                 log.role === 'rt' || log.role === 'admin'
-                                  ? 'bg-orange-500 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400'
+                                  ? 'bg-emerald-105 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
                                   : log.role === 'sekertaris'
                                   ? 'bg-blue-105 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
                                   : log.role === 'bendahara'
@@ -9805,7 +9646,7 @@ export default function AdminDashboard({
                               {log.role === 'warga' ? (
                                 <button
                                   onClick={() => handleShowAccessProfile(log.username)}
-                                  className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
                                 >
                                   Lihat Profil Warga
                                 </button>
@@ -9835,7 +9676,7 @@ export default function AdminDashboard({
                     placeholder="Cari aktivitas berdasarkan nama/username..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white transition-all"
                   />
                 </div>
                 <button
@@ -9891,7 +9732,7 @@ export default function AdminDashboard({
                             <td className="p-4">
                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block uppercase ${
                                 log.role === 'rt' || log.role === 'admin'
-                                  ? 'bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400'
+                                  ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
                                   : log.role === 'sekertaris'
                                   ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
                                   : log.role === 'bendahara'
@@ -9910,7 +9751,7 @@ export default function AdminDashboard({
                               {log.role === 'warga' ? (
                                 <button
                                   onClick={() => handleShowAccessProfile(log.username)}
-                                  className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
                                 >
                                   Lihat Profil Warga
                                 </button>
@@ -9944,7 +9785,7 @@ export default function AdminDashboard({
           ></div>
 
           <div className={`relative bg-white dark:bg-slate-900 w-full ${modalType === 'register_account' ? 'max-w-lg' : 'max-w-md'} rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl overflow-hidden z-10 animate-scale-up max-h-[90vh] flex flex-col`}>
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
 
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
@@ -9994,7 +9835,7 @@ export default function AdminDashboard({
                     {/* SECTION 1: Informasi Warga (Readonly Card) */}
                     <div className="bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
                       <div className="flex items-center gap-2 border-b border-slate-200/60 dark:border-slate-800 pb-2.5">
-                        <UserCheck className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                        <UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                         <h4 className="font-extrabold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
                           Informasi Warga
                         </h4>
@@ -10070,14 +9911,14 @@ export default function AdminDashboard({
 
                     {/* SECTION 1.5: Data Akun Saat Ini (Only in Edit Mode) */}
                     {isEditMode && (
-                      <div className="bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-900/40 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
-                        <div className="flex items-center gap-2 border-b border-orange-200/50 dark:border-orange-900/30 pb-2.5">
-                          <Shield className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                          <h4 className="font-extrabold text-orange-800 dark:text-orange-300 text-xs uppercase tracking-wider">
+                      <div className="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
+                        <div className="flex items-center gap-2 border-b border-emerald-200/50 dark:border-emerald-900/30 pb-2.5">
+                          <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <h4 className="font-extrabold text-emerald-800 dark:text-emerald-300 text-xs uppercase tracking-wider">
                             Data Akun Saat Ini
                           </h4>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 rounded-full font-extrabold text-[9px] ml-auto">
-                            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full font-extrabold text-[9px] ml-auto">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                             Aktif
                           </span>
                         </div>
@@ -10085,16 +9926,16 @@ export default function AdminDashboard({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                           {/* Username Saat Ini */}
                           <div>
-                            <span className="text-orange-600/70 dark:text-orange-400/70 font-bold block text-[10px] uppercase">Username Saat Ini</span>
-                            <span className="font-extrabold text-orange-900 dark:text-orange-100 text-sm font-mono">
+                            <span className="text-emerald-600/70 dark:text-emerald-400/70 font-bold block text-[10px] uppercase">Username Saat Ini</span>
+                            <span className="font-extrabold text-emerald-900 dark:text-emerald-100 text-sm font-mono">
                               @{accountForm.username || '-'}
                             </span>
                           </div>
 
                           {/* Tanggal Pembuatan Akun */}
                           <div>
-                            <span className="text-orange-600/70 dark:text-orange-400/70 font-bold block text-[10px] uppercase">Tanggal Pembuatan Akun</span>
-                            <span className="font-bold text-orange-800 dark:text-orange-200 text-xs">
+                            <span className="text-emerald-600/70 dark:text-emerald-400/70 font-bold block text-[10px] uppercase">Tanggal Pembuatan Akun</span>
+                            <span className="font-bold text-emerald-800 dark:text-emerald-200 text-xs">
                               {existingAccountCreatedAt
                                 ? new Date(existingAccountCreatedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                                 : 'Terdaftar pada registrasi'}
@@ -10102,10 +9943,10 @@ export default function AdminDashboard({
                           </div>
 
                           {/* Tanggal Pergantian Password Terakhir */}
-                          <div className="sm:col-span-2 bg-orange-500/5 dark:bg-orange-950/40 p-2.5 rounded-xl border border-orange-500/10 flex items-center justify-between">
+                          <div className="sm:col-span-2 bg-emerald-500/5 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-500/10 flex items-center justify-between">
                             <div>
-                              <span className="text-orange-600/70 dark:text-orange-400/70 font-bold block text-[10px] uppercase">Tanggal Pergantian Password Terakhir</span>
-                              <span className="font-extrabold text-orange-900 dark:text-orange-100 text-xs font-mono">
+                              <span className="text-emerald-600/70 dark:text-emerald-400/70 font-bold block text-[10px] uppercase">Tanggal Pergantian Password Terakhir</span>
+                              <span className="font-extrabold text-emerald-900 dark:text-emerald-100 text-xs font-mono">
                                 {existingPasswordChangedAt
                                   ? new Date(existingPasswordChangedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                                   : (existingAccountCreatedAt 
@@ -10117,16 +9958,16 @@ export default function AdminDashboard({
 
                           {/* Password Saat Ini */}
                           <div className="sm:col-span-2">
-                            <span className="text-orange-600/70 dark:text-orange-400/70 font-bold block text-[10px] uppercase mb-1">Password Saat Ini</span>
+                            <span className="text-emerald-600/70 dark:text-emerald-400/70 font-bold block text-[10px] uppercase mb-1">Password Saat Ini</span>
                             {existingAccountPassword ? (
                               <div className="flex items-center gap-2">
-                                <div className="flex-1 px-3 py-2 bg-white/80 dark:bg-slate-900/60 border border-orange-200/60 dark:border-orange-800/50 rounded-xl font-mono font-bold text-orange-900 dark:text-orange-100 text-sm select-all break-all shadow-xs">
+                                <div className="flex-1 px-3 py-2 bg-white/80 dark:bg-slate-900/60 border border-emerald-200/60 dark:border-emerald-800/50 rounded-xl font-mono font-bold text-emerald-900 dark:text-emerald-100 text-sm select-all break-all shadow-xs">
                                   {showExistingPassword ? existingAccountPassword : '•'.repeat(Math.max(existingAccountPassword.length, 8))}
                                 </div>
                                 <button
                                   type="button"
                                   onClick={() => setShowExistingPassword(!showExistingPassword)}
-                                  className="px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white font-extrabold rounded-xl transition-all cursor-pointer text-[10px] flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0"
+                                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition-all cursor-pointer text-[10px] flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0"
                                   title={showExistingPassword ? 'Sembunyikan Password' : 'Tampilkan Password'}
                                 >
                                   {showExistingPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -10154,7 +9995,7 @@ export default function AdminDashboard({
                           <button
                             type="button"
                             onClick={() => handleGenerateUsername()}
-                            className="text-[10px] font-bold text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-1 cursor-pointer bg-orange-500/10 px-2.5 py-1 rounded-lg hover:bg-orange-500/20 active:scale-95 transition-all shadow-xs"
+                            className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer bg-emerald-500/10 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20 active:scale-95 transition-all shadow-xs"
                             title="Klik untuk membuat rekomendasi username baru secara acak"
                           >
                             <Wand2 className="w-3.5 h-3.5 animate-bounce" />
@@ -10178,7 +10019,7 @@ export default function AdminDashboard({
                             }
                           }}
                           className={`w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border ${
-                            usernameFieldError ? 'border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 dark:border-slate-800 focus:ring-orange-500/20 focus:border-orange-500'
+                            usernameFieldError ? 'border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 dark:border-slate-800 focus:ring-emerald-500/20 focus:border-emerald-500'
                           } rounded-xl outline-none focus:ring-2 text-slate-900 dark:text-white font-mono font-semibold transition-all disabled:opacity-50`}
                         />
                         {usernameFieldError && (
@@ -10212,7 +10053,7 @@ export default function AdminDashboard({
                           className={`w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border ${
                             emailFieldError 
                               ? 'border-rose-500 focus:ring-rose-500/20' 
-                              : 'border-slate-200 dark:border-slate-800 focus:ring-orange-500/20 focus:border-orange-500'
+                              : 'border-slate-200 dark:border-slate-800 focus:ring-emerald-500/20 focus:border-emerald-500'
                           } rounded-xl outline-none focus:ring-2 text-slate-900 dark:text-white transition-all disabled:opacity-50`}
                         />
                         {emailFieldError && (
@@ -10236,7 +10077,7 @@ export default function AdminDashboard({
                             placeholder={isEditMode ? 'Kosongkan jika tidak ada perubahan' : 'Masukkan kata sandi (min. 8 karakter)'}
                             value={accountForm.password}
                             onChange={(e) => setAccountForm({ ...accountForm, password: e.target.value })}
-                            className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white font-mono transition-all disabled:opacity-50"
+                            className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white font-mono transition-all disabled:opacity-50"
                           />
                           <button
                             type="button"
@@ -10265,7 +10106,7 @@ export default function AdminDashboard({
                             className={`w-full pl-3.5 pr-10 py-2.5 bg-slate-50 dark:bg-slate-900/50 border ${
                               accountForm.confirmPassword && accountForm.confirmPassword !== accountForm.password
                                 ? 'border-rose-500 focus:ring-rose-500/20'
-                                : 'border-slate-200 dark:border-slate-800 focus:ring-orange-500/20 focus:border-orange-500'
+                                : 'border-slate-200 dark:border-slate-800 focus:ring-emerald-500/20 focus:border-emerald-500'
                             } rounded-xl outline-none focus:ring-2 text-slate-900 dark:text-white font-mono transition-all disabled:opacity-50`}
                           />
                           <button
@@ -10299,7 +10140,7 @@ export default function AdminDashboard({
                         <button
                           type="submit"
                           disabled={!isFormValid || isCreatingAccount}
-                          className="flex-1 py-2.5 px-4 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                          className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                         >
                           {isCreatingAccount ? (
                             <>
@@ -10336,7 +10177,7 @@ export default function AdminDashboard({
                       placeholder="Nama lengkap warga"
                       value={wargaForm.name}
                       onChange={(e) => setWargaForm({ ...wargaForm, name: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white"
                     />
                   </div>
 
@@ -10353,7 +10194,7 @@ export default function AdminDashboard({
                         placeholder="Nomor NIK"
                         value={wargaForm.nik}
                         onChange={(e) => setWargaForm({ ...wargaForm, nik: e.target.value.replace(/\D/g, '') })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white font-mono"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white font-mono"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -10366,7 +10207,7 @@ export default function AdminDashboard({
                         placeholder="Nomor KK"
                         value={wargaForm.noKk}
                         onChange={(e) => setWargaForm({ ...wargaForm, noKk: e.target.value.replace(/\D/g, '') })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white font-mono"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white font-mono"
                       />
                     </div>
                   </div>
@@ -10381,7 +10222,7 @@ export default function AdminDashboard({
                         placeholder="Contoh: 081234567890"
                         value={wargaForm.noHp || ''}
                         onChange={(e) => setWargaForm({ ...wargaForm, noHp: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -10394,7 +10235,7 @@ export default function AdminDashboard({
                           const calculatedAge = calculateAge(birthDate);
                           setWargaForm({ ...wargaForm, tglLahir: birthDate, usia: calculatedAge });
                         }}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white text-xs"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white text-xs"
                       />
                     </div>
                   </div>
@@ -10463,7 +10304,7 @@ export default function AdminDashboard({
                         placeholder="Contoh: A"
                         value={wargaForm.blok || ''}
                         onChange={(e) => setWargaForm({ ...wargaForm, blok: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -10476,7 +10317,7 @@ export default function AdminDashboard({
                         placeholder="Contoh: 12"
                         value={wargaForm.nomor || ''}
                         onChange={(e) => setWargaForm({ ...wargaForm, nomor: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white"
                       />
                     </div>
                   </div>
@@ -10496,7 +10337,7 @@ export default function AdminDashboard({
                   <button
                     type="submit"
                     disabled={isSubmittingWarga}
-                    className="w-full py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 dark:disabled:bg-orange-800 text-white font-bold rounded-xl transition-colors cursor-pointer disabled:cursor-not-allowed text-xs flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 dark:disabled:bg-emerald-800 text-white font-bold rounded-xl transition-colors cursor-pointer disabled:cursor-not-allowed text-xs flex items-center justify-center gap-2 shadow-sm"
                   >
                     {isSubmittingWarga ? (
                       <>
@@ -10583,7 +10424,7 @@ export default function AdminDashboard({
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl transition-colors cursor-pointer text-xs"
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors cursor-pointer text-xs"
                   >
                     Simpan Transaksi Kas
                   </button>
@@ -10601,7 +10442,7 @@ export default function AdminDashboard({
                       placeholder="Kerja bakti, Rapat bulanan..."
                       value={agendaForm.title}
                       onChange={(e) => setAgendaForm({ ...agendaForm, title: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white"
                     />
                   </div>
 
@@ -10686,7 +10527,7 @@ export default function AdminDashboard({
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl transition-colors cursor-pointer text-xs"
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors cursor-pointer text-xs"
                   >
                     Simpan Agenda
                   </button>
@@ -10706,7 +10547,7 @@ export default function AdminDashboard({
           ></div>
           
           <div className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl overflow-hidden z-10 animate-scale-up">
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
             
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Profil Lengkap Warga</h3>
@@ -10721,7 +10562,7 @@ export default function AdminDashboard({
             <div className="p-6 space-y-6 font-sans text-xs sm:text-sm overflow-y-auto max-h-[80vh]">
               {/* Visual Avatar */}
               <div className="flex flex-col items-center text-center space-y-2">
-                <div className="w-16 h-16 bg-gradient-to-tr from-orange-500 to-amber-400 text-white font-black flex items-center justify-center rounded-2xl text-2xl shadow-lg">
+                <div className="w-16 h-16 bg-gradient-to-tr from-emerald-500 to-teal-400 text-white font-black flex items-center justify-center rounded-2xl text-2xl shadow-lg">
                   {viewingCitizenProfile.name ? viewingCitizenProfile.name.charAt(0) : 'W'}
                 </div>
                 <div>
@@ -10764,11 +10605,11 @@ export default function AdminDashboard({
                 </div>
                 <div className="flex justify-between items-center py-1 border-t border-slate-100 dark:border-slate-800/40">
                   <span className="text-slate-500 font-semibold">Status Rumah</span>
-                  <span className="font-bold text-orange-600 dark:text-orange-400">{viewingCitizenProfile.status}</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-450">{viewingCitizenProfile.status}</span>
                 </div>
                 <div className="flex justify-between items-center py-1 border-t border-slate-100 dark:border-slate-800/40">
                   <span className="text-slate-500 font-semibold">Status Hidup</span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${viewingCitizenProfile.statusHidup === 'Hidup' ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600' : 'bg-red-50 dark:bg-red-950/30 text-red-600'}`}>{viewingCitizenProfile.statusHidup}</span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${viewingCitizenProfile.statusHidup === 'Hidup' ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600' : 'bg-red-50 dark:bg-red-950/30 text-red-600'}`}>{viewingCitizenProfile.statusHidup}</span>
                 </div>
               </div>
 
@@ -10781,7 +10622,7 @@ export default function AdminDashboard({
 
               <button
                 onClick={() => setViewingCitizenProfile(null)}
-                className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Tutup Profil
               </button>
@@ -10799,7 +10640,7 @@ export default function AdminDashboard({
           ></div>
           
           <div className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl overflow-hidden z-10 animate-scale-up">
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
             
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Profil Lengkap Warga</h3>
@@ -10814,7 +10655,7 @@ export default function AdminDashboard({
             <div className="p-6 space-y-6 font-sans text-xs sm:text-sm overflow-y-auto max-h-[80vh]">
               {/* Visual Avatar */}
               <div className="flex flex-col items-center text-center space-y-2">
-                <div className="w-16 h-16 bg-gradient-to-tr from-orange-500 to-amber-400 text-white font-black flex items-center justify-center rounded-2xl text-2xl shadow-lg">
+                <div className="w-16 h-16 bg-gradient-to-tr from-emerald-500 to-teal-400 text-white font-black flex items-center justify-center rounded-2xl text-2xl shadow-lg">
                   {viewingCitizenProfile.name ? viewingCitizenProfile.name.charAt(0) : 'W'}
                 </div>
                 <div>
@@ -10857,11 +10698,11 @@ export default function AdminDashboard({
                 </div>
                 <div className="flex justify-between items-center py-1 border-t border-slate-100 dark:border-slate-800/40">
                   <span className="text-slate-550 font-semibold">Status Rumah</span>
-                  <span className="font-bold text-orange-600 dark:text-orange-400">{viewingCitizenProfile.status}</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-450">{viewingCitizenProfile.status}</span>
                 </div>
                 <div className="flex justify-between items-center py-1 border-t border-slate-100 dark:border-slate-800/40">
                   <span className="text-slate-500 font-semibold">Status Hidup</span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${viewingCitizenProfile.statusHidup === 'Hidup' ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-500' : 'bg-red-50 dark:bg-red-950/30 text-red-655'}`}>{viewingCitizenProfile.statusHidup}</span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${viewingCitizenProfile.statusHidup === 'Hidup' ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-650' : 'bg-red-50 dark:bg-red-950/30 text-red-655'}`}>{viewingCitizenProfile.statusHidup}</span>
                 </div>
               </div>
 
@@ -10874,7 +10715,7 @@ export default function AdminDashboard({
 
               <button
                 onClick={() => setViewingCitizenProfile(null)}
-                className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Tutup Profil
               </button>
@@ -10887,7 +10728,7 @@ export default function AdminDashboard({
       {showSudoPrompt && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in font-sans">
           <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
             <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
               <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">
                 {sudoActionType === 'patch_kk' ? 'Edit Nomor Kartu Keluarga' : 'Verifikasi Sandi Keamanan'}
@@ -10925,7 +10766,7 @@ export default function AdminDashboard({
                     placeholder="Masukkan 16 digit nomor KK"
                     value={sudoNewKkInput}
                     onChange={(e) => setSudoNewKkInput(e.target.value.replace(/\D/g, ''))}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-805 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white font-mono font-bold"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-805 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white font-mono font-bold"
                   />
                 </div>
               )}
@@ -10939,14 +10780,14 @@ export default function AdminDashboard({
                   placeholder="Masukkan kata sandi Anda..."
                   value={sudoPasswordInput}
                   onChange={(e) => setSudoPasswordInput(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-805 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-900 dark:text-white font-semibold"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-805 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white font-semibold"
                 />
               </div>
 
               <div className="flex gap-2.5 pt-2">
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-extrabold rounded-xl transition-colors cursor-pointer text-center"
+                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition-colors cursor-pointer text-center"
                 >
                   Konfirmasi
                 </button>
@@ -10968,7 +10809,7 @@ export default function AdminDashboard({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs" onClick={() => setModalType('')}></div>
           <div className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl overflow-hidden z-10 animate-scale-up">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
             
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
@@ -11090,7 +10931,7 @@ export default function AdminDashboard({
                 <button
                   type="submit"
                   disabled={suratMasukSubmitLoading}
-                  className="flex-1 py-3 bg-orange-600 hover:bg-orange-700 text-white font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   {suratMasukSubmitLoading ? (
                     <>
@@ -11119,7 +10960,7 @@ export default function AdminDashboard({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs" onClick={() => setModalType('')}></div>
           <div className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl overflow-hidden z-10 animate-scale-up">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
             
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
@@ -11228,7 +11069,7 @@ export default function AdminDashboard({
                 <button
                   type="submit"
                   disabled={suratKeluarSubmitLoading}
-                  className="flex-1 py-3 bg-orange-600 hover:bg-orange-700 text-white font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   {suratKeluarSubmitLoading ? (
                     <>
@@ -11257,7 +11098,7 @@ export default function AdminDashboard({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-sans">
           <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs" onClick={() => setSuratMasukDetail(null)}></div>
           <div className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl overflow-hidden z-10 animate-scale-up">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
             
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center font-sans">
               <div>
@@ -11282,7 +11123,7 @@ export default function AdminDashboard({
                       ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' 
                       : suratMasukDetail.status === 'Diproses' 
                         ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' 
-                        : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                   }`}>
                     {suratMasukDetail.status}
                   </span>
@@ -11313,7 +11154,7 @@ export default function AdminDashboard({
               <div className="p-4 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-slate-200/50 dark:border-slate-800/80 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-orange-500" />
+                    <FileText className="w-5 h-5 text-emerald-500" />
                     <div>
                       <span className="font-extrabold text-slate-700 dark:text-slate-300 block text-[10px] uppercase">File Lampiran</span>
                       <span className="text-[9px] font-bold text-slate-400 truncate max-w-[180px] block">
@@ -11325,7 +11166,7 @@ export default function AdminDashboard({
                     <button 
                       type="button"
                       onClick={() => alert(`Simulasi mengunduh file: ${suratMasukDetail.fileLampiran}`)}
-                      className="p-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl cursor-pointer"
+                      className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl cursor-pointer"
                       title="Download File"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -11365,7 +11206,7 @@ export default function AdminDashboard({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs" onClick={() => setSuratKeluarDetail(null)}></div>
           <div className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl overflow-hidden z-10 animate-scale-up">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
             
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center font-sans">
               <div>
@@ -11392,7 +11233,7 @@ export default function AdminDashboard({
                         ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' 
                         : suratKeluarDetail.status === 'Disetujui'
                           ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                          : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                   }`}>
                     {suratKeluarDetail.status}
                   </span>
@@ -11417,7 +11258,7 @@ export default function AdminDashboard({
 
               {/* MOCK PREVIEW LETTER GENERATOR */}
               <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50 dark:bg-slate-950/20 text-center flex flex-col items-center justify-center gap-2">
-                <FileText className="w-8 h-8 text-orange-500" />
+                <FileText className="w-8 h-8 text-emerald-500" />
                 <h4 className="font-extrabold text-[10px] text-slate-700 dark:text-slate-300 uppercase">Dokumen Preview Pengantar</h4>
                 <p className="text-[9px] text-slate-400 max-w-[240px] font-bold leading-normal font-sans">
                   Pratinjau draft surat pengantar resmi yang akan dikirimkan ke pihak kelurahan.
@@ -11426,7 +11267,7 @@ export default function AdminDashboard({
                   <button 
                     type="button"
                     onClick={() => alert(`Simulasi mencetak preview surat: ${suratKeluarDetail.nomorSurat}`)}
-                    className="py-1.5 px-3 bg-orange-600 hover:bg-orange-700 text-white font-bold text-[9px] rounded-lg cursor-pointer"
+                    className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[9px] rounded-lg cursor-pointer"
                   >
                     Pratinjau Surat
                   </button>
@@ -11469,7 +11310,7 @@ export default function AdminDashboard({
             ></div>
 
             <div className="relative bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl overflow-hidden z-10 animate-scale-up max-h-[90vh] flex flex-col font-sans">
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
 
               {/* Modal Header */}
               <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
@@ -11479,8 +11320,8 @@ export default function AdminDashboard({
                       Detail Kartu Keluarga (KK)
                     </h3>
                     {hasAccount ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-orange-500/10 text-orange-700 dark:text-orange-300 border border-orange-500/30 rounded-full font-extrabold text-[9px]">
-                        <Check className="w-3 h-3 text-orange-500" />
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 rounded-full font-extrabold text-[9px]">
+                        <Check className="w-3 h-3 text-emerald-500" />
                         Sudah Ada Akun {foundUsername ? `(@${foundUsername})` : ''}
                       </span>
                     ) : (
@@ -11523,7 +11364,7 @@ export default function AdminDashboard({
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 block uppercase font-sans">Status Rumah</span>
-                    <span className="px-2 py-0.5 rounded-full font-extrabold text-[9px] capitalize bg-orange-500/10 text-orange-600 dark:text-orange-400 inline-block mt-0.5">
+                    <span className="px-2 py-0.5 rounded-full font-extrabold text-[9px] capitalize bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 inline-block mt-0.5">
                       {selectedFamilyForDetail.house_status || selectedFamilyForDetail.status || 'Milik Sendiri'}
                     </span>
                   </div>
@@ -11531,7 +11372,7 @@ export default function AdminDashboard({
                     <span className="text-[10px] font-bold text-slate-400 block uppercase font-sans">Status Akun Login</span>
                     <span className="font-bold text-xs block mt-0.5">
                       {hasAccount ? (
-                        <span className="text-orange-600 dark:text-orange-400 font-extrabold">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
                           Aktif {foundUsername ? `(@${foundUsername})` : ''}
                         </span>
                       ) : (
@@ -11575,7 +11416,7 @@ export default function AdminDashboard({
                                 <td className="p-3">
                                   <span className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase ${
                                     isKepala
-                                      ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20'
+                                      ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
                                       : 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
                                   }`}>
                                     {isKepala ? 'Kepala Keluarga' : 'Anggota Keluarga'}
@@ -11613,13 +11454,13 @@ export default function AdminDashboard({
                       handleCreateAccountForFamily(fam);
                     }}
                     disabled={isCreatingAccount}
-                    className="py-2 px-4 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="py-2 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     <Key className="w-3.5 h-3.5" />
                     Registrasi Akun Login
                   </button>
                 ) : (
-                  <div className="text-[11px] text-orange-600 dark:text-orange-400 font-extrabold flex items-center gap-1">
+                  <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" />
                     Akun Login Resmi Terdaftar
                   </div>
@@ -11642,7 +11483,7 @@ export default function AdminDashboard({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs" onClick={() => setPreviewingTemplate(null)}></div>
           <div className="relative bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl overflow-hidden z-10 animate-scale-up my-8">
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
             
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center font-sans">
               <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Pratinjau Kop Surat Resmi RT 05</h3>
@@ -11750,7 +11591,7 @@ export default function AdminDashboard({
               <div className="flex gap-2">
                 <button
                   onClick={() => alert(`Mengunduh berkas template: ${previewingTemplate.name}.docx`)}
-                  className="py-2.5 px-4 bg-orange-600 hover:bg-orange-700 text-white font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-orange-500/10 flex items-center gap-1.5"
+                  className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-emerald-500/10 flex items-center gap-1.5"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Unduh Dokumen</span>
@@ -11774,7 +11615,7 @@ export default function AdminDashboard({
             {/* Modal Header */}
             <div className="p-5 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-b border-slate-800 flex justify-between items-center shrink-0">
               <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 bg-orange-500/10 text-orange-400 rounded-2xl border border-orange-500/20 flex items-center justify-center shadow-inner">
+                <div className="w-11 h-11 bg-emerald-500/10 text-emerald-400 rounded-2xl border border-emerald-500/20 flex items-center justify-center shadow-inner">
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <div>
@@ -11784,7 +11625,7 @@ export default function AdminDashboard({
                     </h3>
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                       selectedProofModal.type === 'ipl' 
-                        ? 'bg-orange-500/15 text-orange-400 border border-orange-500/30'
+                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                         : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
                     }`}>
                       {selectedProofModal.type === 'ipl' ? 'IPL Bulanan' : 'Uang Kas'}
@@ -11818,13 +11659,13 @@ export default function AdminDashboard({
 
               <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-1">
                 <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">
-                  <Wallet className="w-3.5 h-3.5 text-orange-400" />
+                  <Wallet className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Nominal Setor</span>
                 </div>
-                <p className="font-mono font-black text-orange-400 text-sm">
+                <p className="font-mono font-black text-emerald-400 text-sm">
                   {formatRupiah(selectedProofModal.amount)}
                 </p>
-                <span className="text-[10px] text-orange-500/80 font-bold block">Menunggu Konfirmasi</span>
+                <span className="text-[10px] text-emerald-500/80 font-bold block">Menunggu Konfirmasi</span>
               </div>
 
               <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-1">
@@ -11918,7 +11759,7 @@ export default function AdminDashboard({
               <div className="w-full h-full flex items-center justify-center overflow-auto max-h-[50vh] p-2">
                 {selectedProofModal.isLoading ? (
                   <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
-                    <div className="w-9 h-9 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-9 h-9 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                     <p className="text-xs text-slate-300 font-bold">Mengunduh & memuat berkas bukti transfer...</p>
                     <span className="text-[10px] text-slate-500">Membuka stream berkas dari secure_uploads</span>
                   </div>
@@ -12001,7 +11842,7 @@ export default function AdminDashboard({
                     setSelectedProofModal(null);
                     await handleVerifyPendingPayment(type, paymentId, 'diterima');
                   }}
-                  className="flex-1 sm:flex-initial py-2.5 px-6 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-black text-xs rounded-xl cursor-pointer shadow-lg shadow-orange-600/25 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                  className="flex-1 sm:flex-initial py-2.5 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl cursor-pointer shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Setujui Pembayaran</span>
@@ -12042,7 +11883,7 @@ export default function AdminDashboard({
                 <button
                   type="button"
                   onClick={() => setKtpTab('asli')}
-                  className={`flex-1 py-2 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${ktpTab === 'asli' ? 'bg-orange-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                  className={`flex-1 py-2 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${ktpTab === 'asli' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
                 >
                   📸 Foto Berkas KTP Asli
                 </button>
@@ -12097,7 +11938,7 @@ export default function AdminDashboard({
                     <h5 className="text-xs font-extrabold text-slate-800 dark:text-slate-200">KOTA DEPOK</h5>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-sky-950/80 text-orange-400 p-2.5 rounded-xl font-mono text-sm font-black tracking-widest justify-center shadow-inner border border-sky-700/50">
+                  <div className="flex items-center gap-3 bg-sky-950/80 text-emerald-400 p-2.5 rounded-xl font-mono text-sm font-black tracking-widest justify-center shadow-inner border border-sky-700/50">
                     <span className="text-sky-300 text-xs">NIK :</span>
                     <span>{selectedKtpWarga.nik || selectedKtpWarga.wargaNik || '3276051508980004'}</span>
                   </div>
@@ -12142,7 +11983,7 @@ export default function AdminDashboard({
                       </div>
                       <div className="grid grid-cols-12 gap-1">
                         <span className="col-span-4 text-slate-500 dark:text-slate-400 font-bold">Berlaku Hingga</span>
-                        <span className="col-span-8 font-black text-orange-600 dark:text-orange-400">SEUMUR HIDUP</span>
+                        <span className="col-span-8 font-black text-emerald-600 dark:text-emerald-400">SEUMUR HIDUP</span>
                       </div>
                     </div>
 
@@ -12155,7 +11996,7 @@ export default function AdminDashboard({
                         />
                       </div>
                       <div className="text-center">
-                        <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/30">
+                        <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                           VERIFIED RT 05
                         </span>
                       </div>
@@ -12179,129 +12020,20 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* 4. EMAIL OTP VERIFICATION POP-UP CARD */}
-      {showOtpModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-slate-950/70 backdrop-blur-md transition-opacity animate-fade-in"
-            onClick={() => { setShowOtpModal(false); setModalType('register_account'); }}
-          ></div>
-
-          <div className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-orange-500/30 shadow-2xl overflow-hidden z-10 animate-scale-up p-6 sm:p-7 space-y-6">
-            {/* Top Accent Gradient Bar */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 via-amber-400 to-cyan-500"></div>
-
-            {/* Close Button */}
-            <button 
-              onClick={() => { setShowOtpModal(false); setModalType('register_account'); }}
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-full cursor-pointer transition-all hover:scale-105 active:scale-95"
-              title="Tutup Modal OTP"
-            >
-              <XIcon className="w-4 h-4" />
-            </button>
-
-            {/* Header Info */}
-            <div className="text-center space-y-3 pt-2">
-              <div className="mx-auto w-14 h-14 bg-gradient-to-tr from-orange-500/20 to-amber-500/20 dark:from-orange-500/30 dark:to-amber-500/30 border border-orange-500/40 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/10">
-                <Mail className="w-7 h-7 text-orange-600 dark:text-orange-400 animate-pulse" />
-              </div>
-              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                Verifikasi Kode OTP Email
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium px-2">
-                Masukkan 6 digit kode verifikasi OTP yang telah dikirimkan ke alamat email warga:
-              </p>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 rounded-xl text-orange-800 dark:text-orange-300 font-mono font-bold text-xs">
-                <span>📧</span>
-                <span>{otpEmail}</span>
-              </div>
-            </div>
-
-            {/* OTP Form */}
-            <form onSubmit={handleVerifyOtpSubmit} className="space-y-5">
-              {/* 6 Digit Inputs */}
-              <div className="flex justify-center gap-1.5 sm:gap-2.5" onPaste={handleOtpPaste}>
-                {otpDigits.map((digit, index) => (
-                  <input
-                    key={index}
-                    id={`otp-input-${index}`}
-                    name={`otp-code-${index}`}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    aria-label={`Digit OTP ke-${index + 1}`}
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOtpInputChange(index, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                    className={`w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-mono font-black rounded-xl border-2 outline-none p-0 transition-all ${
-                      digit 
-                        ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 shadow-sm shadow-orange-500/20' 
-                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20'
-                    }`}
-                    autoFocus={index === 0}
-                  />
-                ))}
-              </div>
-
-              {/* Error message */}
-              {otpError && (
-                <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{otpError}</span>
-                </div>
-              )}
-
-              {/* Resend Timer / Button */}
-              <div className="text-center pt-1">
-                {otpTimer > 0 ? (
-                  <p className="text-xs text-slate-400 font-semibold flex items-center justify-center gap-1.5">
-                    <span>Tidak menerima kode? Kirim ulang dalam</span>
-                    <span className="font-mono font-bold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-md">{otpTimer}s</span>
-                  </p>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => generateAndSendOtp(otpEmail)}
-                    className="text-xs font-bold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 flex items-center justify-center gap-1.5 mx-auto hover:underline cursor-pointer bg-orange-500/10 px-3.5 py-1.5 rounded-xl transition-all active:scale-95"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>⚡ Kirim Ulang Kode OTP</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => { setShowOtpModal(false); setModalType('register_account'); }}
-                  className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-extrabold text-xs rounded-xl transition-colors cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={otpDigits.join('').length < 6 || isVerifyingOtp}
-                  className="flex-1 py-3 px-4 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-orange-600/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-                >
-                  {isVerifyingOtp ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Memverifikasi...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="w-4 h-4" />
-                      <span>Verifikasi & Buat Akun</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* 4. EMAIL OTP VERIFICATION POP-UP MODAL (FLOW 1) */}
+      <OtpVerificationModal
+        isOpen={showOtpModal}
+        onClose={() => {
+          setShowOtpModal(false);
+          setPendingAccountData(null);
+        }}
+        userId={otpTargetUserId}
+        email={otpTargetEmail}
+        flowType="admin_registration"
+        title={`Verifikasi Akun - ${pendingAccountData?.citizenName || 'Warga'}`}
+        subtitle={`Masukkan 6 digit kode OTP yang telah dikirimkan ke email (${otpTargetEmail || 'terdaftar'}) untuk memverifikasi akun:`}
+        onSuccess={handleOtpVerificationSuccess}
+      />
     </div>
   );
 }

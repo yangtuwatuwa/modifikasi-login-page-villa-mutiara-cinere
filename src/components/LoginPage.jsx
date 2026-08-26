@@ -4,6 +4,7 @@ import {
   Lock, User, LogIn, CheckCircle2, 
   ShieldAlert, Landmark, Sun, Moon
 } from 'lucide-react';
+import OtpVerificationModal from './OtpVerificationModal';
 
 export default function LoginPage({ 
   wargaList = [], 
@@ -14,10 +15,14 @@ export default function LoginPage({
   const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
+  const [unverifiedOtpState, setUnverifiedOtpState] = useState({
+    isOpen: false,
+    userId: null,
+    email: ''
+  });
 
   const handleLoginSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setError('');
     setSuccess('');
 
@@ -46,6 +51,22 @@ export default function LoginPage({
       });
 
       const resData = await response.json();
+
+      // FLOW 2: Check for unverified status
+      const isUnverified = (resData.status && String(resData.status).toLowerCase() === 'unverified') ||
+                           (resData.message && String(resData.message).toLowerCase().includes('unverified'));
+      const unverifiedUserId = resData.userId || resData.output?.userId || resData.user?.id || resData.id;
+
+      if (isUnverified && unverifiedUserId) {
+        setError('');
+        setUnverifiedOtpState({
+          isOpen: true,
+          userId: unverifiedUserId,
+          email: resData.email || resData.user?.email || ''
+        });
+        return;
+      }
+
       if (!response.ok) {
         setError(resData.message || resData.status || 'Username atau password salah.');
         return;
@@ -87,13 +108,42 @@ export default function LoginPage({
 
     } catch (err) {
       console.warn('API Login offline/error:', err);
-      setSuccess('');
-      setError('Login Gagal: Gagal menghubungkan ke server API.');
+      setError('Gagal menghubungkan ke server API.');
+    }
+  };
+
+  const handleOtpSuccess = () => {
+    setUnverifiedOtpState({ isOpen: false, userId: null, email: '' });
+
+    // Flow 2: Use in-memory state only. If credentials exist in React state, re-trigger login.
+    if (loginData.username && loginData.password) {
+      Swal.fire({
+        title: 'Verifikasi Berhasil! 🎉',
+        text: 'Akun Anda telah aktif. Melanjutkan proses login otomatis...',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+      setTimeout(() => {
+        handleLoginSubmit();
+      }, 600);
+    } else {
+      Swal.fire({
+        title: 'Verifikasi Berhasil! 🎉',
+        text: 'Akun Anda telah berhasil diverifikasi. Silakan masukkan kata sandi Anda untuk masuk.',
+        icon: 'success',
+        confirmButtonColor: '#10b981',
+        confirmButtonText: 'Masuk Sekarang'
+      });
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/90 flex flex-col justify-center relative overflow-hidden font-sans">
+      
+      {/* Decorative background ambient blobs */}
+      <div className="absolute top-1/4 left-10 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-3xl -z-10 animate-pulse"></div>
+      <div className="absolute bottom-1/4 right-10 w-[500px] h-[500px] bg-teal-500/5 rounded-full blur-3xl -z-10 animate-pulse" style={{ animationDelay: '2s' }}></div>
 
       {/* Floating Theme Toggle (Top Right) */}
       <div className="absolute top-6 right-6 z-50">
@@ -112,22 +162,22 @@ export default function LoginPage({
           {/* Brand Left Column */}
           <div className="lg:col-span-6 space-y-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-tr from-orange-600 to-amber-500 rounded-2xl shadow-lg shadow-orange-500/10 text-white">
+              <div className="p-3 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-2xl shadow-lg shadow-emerald-500/10 text-white">
                 <Landmark className="w-8 h-8" />
               </div>
               <div className="text-left">
-                <span className="block text-2xl font-black tracking-tight bg-gradient-to-r from-orange-600 to-amber-500 dark:from-orange-400 dark:to-amber-300 bg-clip-text text-transparent">
-                  Villa Mutiara Mas Cinere
+                <span className="block text-2xl font-black tracking-tight bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent">
+                  Sawangan Green Park
                 </span>
                 <span className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mt-1">
-                  RUKUN TETANGGA 05 / RW 11
+                  RUKUN TETANGGA 05 / RW 06
                 </span>
               </div>
             </div>
 
             <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white leading-none tracking-tight">
               Sistem Informasi & <br />
-              <span className="bg-gradient-to-r from-orange-600 to-amber-500 dark:from-orange-400 dark:to-amber-300 bg-clip-text text-transparent">Layanan Warga RT 05</span>
+              <span className="bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent">Layanan Warga RT 05</span>
             </h1>
 
             <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg">
@@ -142,11 +192,11 @@ export default function LoginPage({
               <div className="grid grid-cols-2 gap-x-4 gap-y-3.5 text-slate-600 dark:text-slate-350">
                 <div>
                   <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider">Nama Wilayah</span>
-                  <span className="font-bold text-slate-850 dark:text-slate-200">Villa Mutiara Mas Cinere</span>
+                  <span className="font-bold text-slate-850 dark:text-slate-200">Sawangan Green Park</span>
                 </div>
                 <div>
                   <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider">Kecamatan</span>
-                  <span className="font-bold text-slate-850 dark:text-slate-200">Cinere</span>
+                  <span className="font-bold text-slate-850 dark:text-slate-200">Sawangan</span>
                 </div>
                 <div>
                   <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider">Kota</span>
@@ -161,7 +211,7 @@ export default function LoginPage({
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
                 <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-1">Batas-Batas Lingkungan</span>
                 <p className="text-slate-500 dark:text-slate-405 leading-relaxed text-[11px] font-medium">
-                  Utara: Perumahan BSI | Selatan: Jalan Raya Cinere | Timur: Sungai Irigasi | Barat: RTH Komplek.
+                  Utara: Perumahan BSI | Selatan: Jalan Raya Sawangan | Timur: Sungai Irigasi | Barat: RTH Komplek.
                 </p>
               </div>
             </div>
@@ -178,17 +228,18 @@ export default function LoginPage({
               </div>
 
               {/* Feedback Alerts */}
-              {error ? (
+              {error && (
                 <div className="p-3.5 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50 rounded-2xl text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-2 animate-fade-in">
                   <ShieldAlert className="w-4 h-4 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
-              ) : success ? (
-                <div className="p-3.5 bg-orange-50 dark:bg-orange-950/20 border border-orange-500 dark:border-orange-900/50 rounded-2xl text-orange-600 dark:text-orange-400 text-xs font-bold flex items-center gap-2 animate-fade-in">
-                  <CheckCircle2 className="w-4 h-4 flex-shrink-0 animate-pulse" />
+              )}
+              {success && (
+                <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-105 dark:border-emerald-900/50 rounded-2xl text-emerald-600 dark:text-emerald-450 text-xs font-bold flex items-center gap-2 animate-fade-in">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0 animate-bounce" />
                   <span>{success}</span>
                 </div>
-              ) : null}
+              )}
 
               {/* Login Form */}
               <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs font-sans">
@@ -202,7 +253,7 @@ export default function LoginPage({
                       placeholder="Masukkan username atau NIK"
                       value={loginData.username}
                       onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-slate-900 dark:text-white transition-all text-xs font-medium"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 dark:text-white transition-all text-xs font-medium"
                     />
                   </div>
                 </div>
@@ -217,14 +268,14 @@ export default function LoginPage({
                       placeholder="Masukkan kata sandi"
                       value={loginData.password}
                       onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-slate-900 dark:text-white transition-all text-xs font-medium"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 dark:text-white transition-all text-xs font-medium"
                     />
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-3 bg-orange-600 hover:bg-orange-700 active:scale-[0.99] text-white font-bold rounded-xl cursor-pointer hover:shadow-lg hover:shadow-orange-600/10 transition-all text-xs flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold rounded-xl cursor-pointer hover:shadow-lg hover:shadow-emerald-600/10 transition-all text-xs flex items-center justify-center gap-2"
                 >
                   <LogIn className="w-4 h-4" />
                   <span>Masuk ke Portal</span>
@@ -238,6 +289,18 @@ export default function LoginPage({
           
         </div>
       </div>
+
+      {/* OTP Verification Modal for Unverified Citizen Login (Flow 2) */}
+      <OtpVerificationModal
+        isOpen={unverifiedOtpState.isOpen}
+        onClose={() => setUnverifiedOtpState({ isOpen: false, userId: null, email: '' })}
+        userId={unverifiedOtpState.userId}
+        email={unverifiedOtpState.email}
+        flowType="user_login"
+        title="Verifikasi Akun Warga"
+        subtitle="Akun Anda belum diverifikasi. Kode OTP baru telah otomatis dikirimkan ke email Anda. Masukkan 6 digit kode OTP untuk mengaktifkan akun:"
+        onSuccess={handleOtpSuccess}
+      />
     </div>
   );
 }

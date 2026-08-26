@@ -38,13 +38,13 @@ export default function Kas({ totalPemasukan, totalPengeluaran, sisaKas, transak
         
         {/* Section Header */}
         <div className="text-center space-y-4 mb-16">
-          <h2 className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+          <h2 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
             Transparansi Kas
           </h2>
           <p className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">
             Laporan Keuangan & Kas RT
           </p>
-          <div className="w-12 h-1 bg-orange-500 mx-auto rounded-full"></div>
+          <div className="w-12 h-1 bg-emerald-500 mx-auto rounded-full"></div>
         </div>
 
         {/* 3 Core Kas Summary Cards */}
@@ -52,7 +52,7 @@ export default function Kas({ totalPemasukan, totalPengeluaran, sisaKas, transak
           
           {/* Card 1: Total Pemasukan */}
           <div className="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm flex items-center gap-4">
-            <div className="p-3.5 bg-orange-500/10 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-2xl shrink-0">
+            <div className="p-3.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl shrink-0">
               <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8" />
             </div>
             <div className="min-w-0 flex-1">
@@ -78,13 +78,13 @@ export default function Kas({ totalPemasukan, totalPengeluaran, sisaKas, transak
 
           {/* Card 3: Sisa Kas (Balance) */}
           <div className="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-md flex items-center gap-4 relative overflow-hidden col-span-1 sm:col-span-2 md:col-span-1">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500"></div>
+            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500"></div>
             <div className="p-3.5 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-2xl shrink-0">
               <Wallet className="w-6 h-6 sm:w-8 sm:h-8" />
             </div>
             <div className="min-w-0 flex-1">
               <span className="block text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Sisa Saldo Kas</span>
-              <span className="text-xl sm:text-2xl font-black text-orange-600 dark:text-orange-400 mt-0.5 block truncate">
+              <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">
                 {formatCurrency(sisaKas)}
               </span>
             </div>
@@ -109,7 +109,7 @@ export default function Kas({ totalPemasukan, totalPengeluaran, sisaKas, transak
                   placeholder="Cari transaksi..."
                   value={searchTerm}
                   onChange={handleSearchChange}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                 />
               </div>
 
@@ -160,7 +160,7 @@ export default function Kas({ totalPemasukan, totalPengeluaran, sisaKas, transak
                         </span>
                       </td>
                       <td className={`py-4 px-4 text-right font-black ${
-                        item.type === 'income' ? 'text-orange-600 dark:text-orange-400' : 'text-rose-600 dark:text-rose-400'
+                        item.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                       }`}>
                         {item.type === 'income' ? '+' : '-'} {formatCurrency(item.amount)}
                       </td>

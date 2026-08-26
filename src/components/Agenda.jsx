@@ -47,13 +47,13 @@ export default function Agenda({ agendas }) {
         
         {/* Section Header */}
         <div className="text-center space-y-4 mb-16">
-          <h2 className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+          <h2 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
             Agenda Kegiatan
           </h2>
           <p className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">
             Kalender & Jadwal Acara Warga
           </p>
-          <div className="w-12 h-1 bg-orange-500 mx-auto rounded-full"></div>
+          <div className="w-12 h-1 bg-emerald-500 mx-auto rounded-full"></div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-stretch">
@@ -65,7 +65,7 @@ export default function Agenda({ agendas }) {
                 <span className="font-extrabold text-lg text-slate-900 dark:text-white">
                   Juli 2026
                 </span>
-                <span className="text-xs font-semibold px-3 py-1 bg-orange-500/15 text-orange-600 dark:text-orange-400 rounded-full">
+                <span className="text-xs font-semibold px-3 py-1 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded-full">
                   Agenda Aktif
                 </span>
               </div>
@@ -91,16 +91,16 @@ export default function Agenda({ agendas }) {
                         !cell.day
                           ? 'bg-transparent text-transparent pointer-events-none'
                           : isSelected
-                          ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20 scale-105'
+                          ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20 scale-105'
                           : isEvent
-                          ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/30 hover:bg-orange-500 hover:text-white cursor-pointer'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white cursor-pointer'
                           : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
                       }`}
                     >
                       {cell.day}
                       {/* Event Dot */}
                       {isEvent && !isSelected && (
-                        <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                        <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                       )}
                     </button>
                   );
@@ -110,7 +110,7 @@ export default function Agenda({ agendas }) {
 
             {/* Calendar Footer Tip */}
             <div className="mt-8 pt-4 border-t border-slate-200/60 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-orange-500 border border-white dark:border-slate-900 inline-block"></span>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white dark:border-slate-900 inline-block"></span>
               <span>Tanggal dengan lingkaran menunjukkan adanya agenda warga. Klik untuk detail.</span>
             </div>
           </div>
@@ -120,12 +120,12 @@ export default function Agenda({ agendas }) {
             
             {/* Active Details Box */}
             {selectedAgenda && (
-              <div className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-xl shadow-orange-500/10 animate-fade-in">
+              <div className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-xl shadow-emerald-500/10 animate-fade-in">
                 <div className="absolute top-6 right-6 p-2 bg-white/10 rounded-2xl">
                   <CalendarIcon className="w-6 h-6 text-white" />
                 </div>
                 
-                <span className="text-xs font-extrabold uppercase tracking-widest text-orange-100">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-emerald-100">
                   Detail Kegiatan Terpilih
                 </span>
                 
@@ -133,21 +133,21 @@ export default function Agenda({ agendas }) {
                   {selectedAgenda.title}
                 </h3>
                 
-                <p className="text-sm text-orange-50/90 mt-3 leading-relaxed">
+                <p className="text-sm text-emerald-50/90 mt-3 leading-relaxed">
                   {selectedAgenda.description}
                 </p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/20 text-sm">
                   <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-orange-200 flex-shrink-0" />
+                    <Clock className="w-4 h-4 text-emerald-200 flex-shrink-0" />
                     <span>{formatLongDate(selectedAgenda.date)} ({selectedAgenda.time})</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-orange-200 flex-shrink-0" />
+                    <MapPin className="w-4 h-4 text-emerald-200 flex-shrink-0" />
                     <span>{selectedAgenda.location}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-orange-200 flex-shrink-0" />
+                    <Users className="w-4 h-4 text-emerald-200 flex-shrink-0" />
                     <span>Peserta: {selectedAgenda.participants}</span>
                   </div>
                 </div>
@@ -168,13 +168,13 @@ export default function Agenda({ agendas }) {
                     onClick={() => setSelectedAgenda(agenda)}
                     className={`flex items-start justify-between p-4 rounded-2xl border transition-all duration-200 cursor-pointer ${
                       selectedAgenda && selectedAgenda.id === agenda.id
-                        ? 'bg-slate-100 dark:bg-slate-800 border-orange-500/40 shadow-sm'
+                        ? 'bg-slate-100 dark:bg-slate-800 border-emerald-500/40 shadow-sm'
                         : 'bg-white dark:bg-slate-900 border-slate-200/60 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                     }`}
                   >
                     <div className="space-y-1.5 pr-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 uppercase">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 uppercase">
                           {agenda.category}
                         </span>
                         <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
@@ -191,7 +191,7 @@ export default function Agenda({ agendas }) {
                     </div>
 
                     <div className="flex-shrink-0 self-center">
-                      <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-orange-500" />
+                      <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-emerald-500" />
                     </div>
                   </div>
                 ))}
