@@ -304,7 +304,7 @@ export default function Hero({
             <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-black tracking-tight text-[var(--color-ink)] leading-[1.1] lg:tracking-[-0.8px]">
               Selamat Datang di Portal <br className="hidden sm:inline" />
               <span className="bg-gradient-to-r from-orange-600 via-amber-500 to-orange-500 bg-clip-text text-transparent">
-                Villa Mutiara Mas Cinere
+                Villa Mutiara Cinere
               </span>
             </h1>
             
@@ -791,7 +791,7 @@ export default function Hero({
               {/* Section Header */}
               <div className="text-center max-w-2xl mx-auto space-y-2">
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[var(--color-ink)] tracking-tight">
-                  Tentang Villa Mutiara Mas Cinere
+                  Tentang Villa Mutiara Cinere
                 </h2>
               </div>
 

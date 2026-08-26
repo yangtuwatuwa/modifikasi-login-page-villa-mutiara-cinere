@@ -523,7 +523,7 @@ export default function App() {
 
             {/* 2. YouTube */}
             <a
-              href="https://youtube.com/@erwesebelas-z6q"
+              href="https://www.youtube.com/@erwesebelaskita"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2.5 hover:text-[#eec98d] transition-colors group cursor-pointer"
@@ -531,7 +531,7 @@ export default function App() {
               <div className="w-8 h-8 rounded-full bg-white text-[#060c1d] group-hover:bg-[#eec98d] flex items-center justify-center transition-all shadow-sm">
                 <Play className="w-4 h-4 fill-current ml-0.5" />
               </div>
-              <span className="text-xs">@erwesebelas-z6q</span>
+              <span className="text-xs">@erwesebelaskita</span>
             </a>
 
             {/* 3. TikTok */}

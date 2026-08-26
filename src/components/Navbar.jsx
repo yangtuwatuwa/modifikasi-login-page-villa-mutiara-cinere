@@ -39,8 +39,8 @@ export default function Navbar({ darkMode, setDarkMode, currentUser, setCurrentU
           {/* Logo / Brand Name */}
           <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => handleNavClick('beranda')}>
             <div className="flex items-center gap-1.5 py-1">
-              <img src={logoRW11} alt="Logo RW 11" className="h-8 sm:h-9 w-auto object-contain drop-shadow-xs" />
               <img src={logoDepok} alt="Logo Kota Depok" className="h-7 sm:h-8 w-auto object-contain drop-shadow-xs opacity-90" />
+              <img src={logoRW11} alt="Logo RW 11" className="h-8 sm:h-9 w-auto object-contain drop-shadow-xs" />
             </div>
             <div className="leading-tight">
               <span className="font-extrabold text-sm sm:text-base tracking-tight text-[var(--color-ink)] block">

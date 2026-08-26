@@ -91,7 +91,7 @@ export default function Profil() {
             >
               <HelpCircle className="w-5 h-5 flex-shrink-0" />
               <div>
-                <span className="block font-bold">Tentang Villa Mutiara Mas Cinere</span>
+                <span className="block font-bold">Tentang Villa Mutiara Cinere</span>
                 <span className="block text-xs font-normal opacity-80 hidden lg:block">Informasi singkat perumahan</span>
               </div>
             </button>

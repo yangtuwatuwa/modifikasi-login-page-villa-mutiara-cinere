@@ -4326,8 +4326,8 @@ export default function AdminDashboard({
           </button>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 py-1">
-  <img src={logoRW11} alt="Logo RW 11" className="h-8 w-auto object-contain drop-shadow-xs" />
   <img src={logoDepok} alt="Logo Kota Depok" className="h-7 w-auto object-contain drop-shadow-xs opacity-90" />
+  <img src={logoRW11} alt="Logo RW 11" className="h-8 w-auto object-contain drop-shadow-xs" />
 </div>
             <div>
               <h1 className="font-extrabold text-xs text-slate-900 dark:text-white leading-tight">Admin Sawangan Green Park</h1>
@@ -4357,8 +4357,8 @@ export default function AdminDashboard({
             <div className="p-4 border-b border-orange-200/80 dark:border-orange-900/40 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="flex items-center gap-1.5 py-1">
-  <img src={logoRW11} alt="Logo RW 11" className="h-8 w-auto object-contain drop-shadow-xs" />
   <img src={logoDepok} alt="Logo Kota Depok" className="h-7 w-auto object-contain drop-shadow-xs opacity-90" />
+  <img src={logoRW11} alt="Logo RW 11" className="h-8 w-auto object-contain drop-shadow-xs" />
 </div>
                 <div>
                   <h1 className="font-extrabold text-xs text-slate-900 dark:text-white leading-tight">Sawangan Green Park</h1>
@@ -4504,8 +4504,8 @@ export default function AdminDashboard({
         {/* Brand/Logo Header */}
         <div className="p-6 border-b border-orange-200/80 dark:border-orange-900/40 flex items-center gap-3">
           <div className="flex items-center gap-1.5 py-1">
-  <img src={logoRW11} alt="Logo RW 11" className="h-8 w-auto object-contain drop-shadow-xs" />
   <img src={logoDepok} alt="Logo Kota Depok" className="h-7 w-auto object-contain drop-shadow-xs opacity-90" />
+  <img src={logoRW11} alt="Logo RW 11" className="h-8 w-auto object-contain drop-shadow-xs" />
 </div>
           <div>
             <h1 className="font-extrabold text-sm text-slate-900 dark:text-white tracking-tight leading-tight">Sawangan Green Park</h1>
